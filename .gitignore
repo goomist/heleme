@@ -1,0 +1,19 @@
+*.iml
+.gradle/
+.kotlin/
+.idea/
+**/build/
+local.properties
+.DS_Store
+
+# Android/Gradle generated artifacts
+*.apk
+*.aab
+*.ap_
+*.dex
+*.class
+
+# Local media and scratch files
+*.mp4
+*.zip
+node_modules/
