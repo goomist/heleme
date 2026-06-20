@@ -75,6 +75,7 @@ internal fun MilkTeaAppEntry() {
     var currentScreenName by rememberSaveable { mutableStateOf(HomeScreen.Calendar.name) }
     var monthStartMillis by rememberSaveable { mutableStateOf(startOfMonth(System.currentTimeMillis())) }
     var selectedDayStart by rememberSaveable { mutableStateOf(startOfDay(System.currentTimeMillis())) }
+    var showMonthPickerDialog by remember { mutableStateOf(false) }
 
     var statsModeName by rememberSaveable { mutableStateOf(StatsMode.Week.name) }
     var weekAnchorMillis by rememberSaveable { mutableStateOf(System.currentTimeMillis()) }
@@ -199,14 +200,7 @@ internal fun MilkTeaAppEntry() {
                         selectedDayRecords = selectedDayRecords,
                         onPrevMonth = { monthStartMillis = addMonths(monthStartMillis, -1) },
                         onNextMonth = { monthStartMillis = addMonths(monthStartMillis, 1) },
-                        onPickMonth = {
-                            showMonthPicker(context, monthStartMillis) { picked ->
-                                monthStartMillis = picked
-                                if (startOfMonth(selectedDayStart) != picked) {
-                                    selectedDayStart = picked
-                                }
-                            }
-                        },
+                        onPickMonth = { showMonthPickerDialog = true },
                         onSelectDay = { selectedDayStart = it },
                         onAddNew = { currentScreenName = HomeScreen.Records.name },
                         onRecordClick = { selectedRecord = it },
@@ -330,9 +324,25 @@ internal fun MilkTeaAppEntry() {
         )
     }
 
+    if (showMonthPickerDialog) {
+        CaramelDatePickerDialog(
+            initialMillis = monthStartMillis,
+            onConfirm = { picked ->
+                val pickedMonthStart = startOfMonth(picked)
+                monthStartMillis = pickedMonthStart
+                if (startOfMonth(selectedDayStart) != pickedMonthStart) {
+                    selectedDayStart = pickedMonthStart
+                }
+                showMonthPickerDialog = false
+            },
+            onDismiss = { showMonthPickerDialog = false },
+        )
+    }
+
     editingRecord?.let { record ->
         EditRecordDialog(
             original = record,
+            allRecords = records,
             onDismiss = { editingRecord = null },
             onSave = { updated ->
                 records = records.map { if (it.id == updated.id) updated else it }

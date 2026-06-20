@@ -10,6 +10,8 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.IntrinsicSize
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -20,10 +22,12 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -42,7 +46,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
@@ -70,7 +73,8 @@ internal fun RecordsScreen(
     onSave: () -> Unit,
     onRecordClick: (MilkTeaRecord) -> Unit,
 ) {
-    val context = LocalContext.current
+    var showDatePickerDialog by remember { mutableStateOf(false) }
+    var showTimePickerDialog by remember { mutableStateOf(false) }
 
     LazyColumn(
         modifier = Modifier
@@ -99,13 +103,11 @@ internal fun RecordsScreen(
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true,
                 )
-                OutlinedTextField(
+                ProductNameField(
                     value = productNameInput,
                     onValueChange = onProductNameChange,
-                    label = { Text("品名") },
-                    placeholder = { Text("例如：多肉葡萄、伯牙绝弦") },
+                    suggestionSource = records,
                     modifier = Modifier.fillMaxWidth(),
-                    singleLine = true,
                 )
                 OutlinedTextField(
                     value = amountInput,
@@ -127,7 +129,7 @@ internal fun RecordsScreen(
                                 .clip(RoundedCornerShape(20.dp))
                                 .background(MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.7f))
                                 .border(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.30f), RoundedCornerShape(20.dp))
-                                .clickable { showDatePicker(context = context, currentMillis = selectedDrinkTimeMillis, onSelected = onDrinkTimeChange) }
+                                .clickable { showDatePickerDialog = true }
                                 .padding(horizontal = 12.dp, vertical = 6.dp),
                         ) { Text("选日期", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.SemiBold) }
                         Box(
@@ -135,7 +137,7 @@ internal fun RecordsScreen(
                                 .clip(RoundedCornerShape(20.dp))
                                 .background(MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.7f))
                                 .border(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.30f), RoundedCornerShape(20.dp))
-                                .clickable { showTimePicker(context = context, currentMillis = selectedDrinkTimeMillis, onSelected = onDrinkTimeChange) }
+                                .clickable { showTimePickerDialog = true }
                                 .padding(horizontal = 12.dp, vertical = 6.dp),
                         ) { Text("选时间", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.SemiBold) }
                         Box(
@@ -194,15 +196,83 @@ internal fun RecordsScreen(
             }
         }
     }
+
+    if (showDatePickerDialog) {
+        CaramelDatePickerDialog(
+            initialMillis = selectedDrinkTimeMillis,
+            onConfirm = { onDrinkTimeChange(it); showDatePickerDialog = false },
+            onDismiss = { showDatePickerDialog = false },
+        )
+    }
+    if (showTimePickerDialog) {
+        CaramelTimePickerDialog(
+            initialMillis = selectedDrinkTimeMillis,
+            onConfirm = { onDrinkTimeChange(it); showTimePickerDialog = false },
+            onDismiss = { showTimePickerDialog = false },
+        )
+    }
+}
+
+@Composable
+private fun ProductNameField(
+    value: String,
+    onValueChange: (String) -> Unit,
+    suggestionSource: List<MilkTeaRecord>,
+    modifier: Modifier = Modifier,
+) {
+    var isFocused by remember { mutableStateOf(false) }
+    val suggestions = remember(value, suggestionSource) {
+        val query = value.trim()
+        if (query.isEmpty()) {
+            emptyList()
+        } else {
+            suggestionSource
+                .map { it.productName.trim() }
+                .filter { it.isNotEmpty() && it.contains(query, ignoreCase = true) && !it.equals(query, ignoreCase = true) }
+                .distinct()
+                .take(5)
+        }
+    }
+
+    Column(modifier = modifier) {
+        OutlinedTextField(
+            value = value,
+            onValueChange = onValueChange,
+            label = { Text("品名") },
+            placeholder = { Text("例如：多肉葡萄、伯牙绝弦") },
+            modifier = Modifier.fillMaxWidth().onFocusChanged { isFocused = it.isFocused },
+            singleLine = true,
+        )
+        if (isFocused && suggestions.isNotEmpty()) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 4.dp)
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f)),
+            ) {
+                suggestions.forEach { suggestion ->
+                    Text(
+                        suggestion,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { onValueChange(suggestion) }
+                            .padding(horizontal = 12.dp, vertical = 8.dp),
+                        style = MaterialTheme.typography.bodyMedium,
+                    )
+                }
+            }
+        }
+    }
 }
 
 @Composable
 internal fun EditRecordDialog(
     original: MilkTeaRecord,
+    allRecords: List<MilkTeaRecord>,
     onDismiss: () -> Unit,
     onSave: (MilkTeaRecord) -> Unit,
 ) {
-    val context = LocalContext.current
     var brand by rememberSaveable(original.id) { mutableStateOf(original.brand) }
     var productName by rememberSaveable(original.id) { mutableStateOf(original.productName) }
     var amount by rememberSaveable(original.id) { mutableStateOf(original.amountYuan) }
@@ -211,6 +281,8 @@ internal fun EditRecordDialog(
     var ice by rememberSaveable(original.id) { mutableStateOf(original.iceLevel) }
     var cupSize by rememberSaveable(original.id) { mutableStateOf(original.cupSize) }
     var drinkTimeMillis by rememberSaveable(original.id) { mutableStateOf(original.drinkTimeMillis) }
+    var showDatePickerDialog by remember { mutableStateOf(false) }
+    var showTimePickerDialog by remember { mutableStateOf(false) }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -229,12 +301,11 @@ internal fun EditRecordDialog(
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true,
                 )
-                OutlinedTextField(
+                ProductNameField(
                     value = productName,
                     onValueChange = { productName = it },
-                    label = { Text("品名") },
+                    suggestionSource = allRecords,
                     modifier = Modifier.fillMaxWidth(),
-                    singleLine = true,
                 )
                 OutlinedTextField(
                     value = amount,
@@ -246,26 +317,10 @@ internal fun EditRecordDialog(
                 )
                 Text("时间：${formatTime(drinkTimeMillis)}")
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    TextButton(
-                        onClick = {
-                            showDatePicker(
-                                context = context,
-                                currentMillis = drinkTimeMillis,
-                                onSelected = { drinkTimeMillis = it },
-                            )
-                        },
-                    ) {
+                    TextButton(onClick = { showDatePickerDialog = true }) {
                         Text("选日期")
                     }
-                    TextButton(
-                        onClick = {
-                            showTimePicker(
-                                context = context,
-                                currentMillis = drinkTimeMillis,
-                                onSelected = { drinkTimeMillis = it },
-                            )
-                        },
-                    ) {
+                    TextButton(onClick = { showTimePickerDialog = true }) {
                         Text("选时间")
                     }
                 }
@@ -323,6 +378,21 @@ internal fun EditRecordDialog(
             }
         },
     )
+
+    if (showDatePickerDialog) {
+        CaramelDatePickerDialog(
+            initialMillis = drinkTimeMillis,
+            onConfirm = { drinkTimeMillis = it; showDatePickerDialog = false },
+            onDismiss = { showDatePickerDialog = false },
+        )
+    }
+    if (showTimePickerDialog) {
+        CaramelTimePickerDialog(
+            initialMillis = drinkTimeMillis,
+            onConfirm = { drinkTimeMillis = it; showTimePickerDialog = false },
+            onDismiss = { showTimePickerDialog = false },
+        )
+    }
 }
 
 @Composable
@@ -337,7 +407,7 @@ internal fun StatsScreen(
     onMonthAnchorChange: (Long) -> Unit,
     onYearAnchorChange: (Long) -> Unit,
 ) {
-    val context = LocalContext.current
+    var showAnchorPickerDialog by remember { mutableStateOf(false) }
 
     val periodStart: Long
     val periodEnd: Long
@@ -453,13 +523,7 @@ internal fun StatsScreen(
                     text = periodLabel,
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.SemiBold,
-                    modifier = Modifier.clickable {
-                        when (mode) {
-                            StatsMode.Week -> showDatePicker(context, weekAnchorMillis, onWeekAnchorChange)
-                            StatsMode.Month -> showMonthPicker(context, monthAnchorMillis, onMonthAnchorChange)
-                            StatsMode.Year -> showYearPicker(context, yearAnchorMillis, onYearAnchorChange)
-                        }
-                    },
+                    modifier = Modifier.clickable { showAnchorPickerDialog = true },
                 )
 
                 TextButton(
@@ -534,13 +598,19 @@ internal fun StatsScreen(
         }
 
         item {
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Row(
+                modifier = Modifier.height(IntrinsicSize.Max),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
                 Card(
-                    modifier = Modifier.weight(1f),
+                    modifier = Modifier.weight(1f).fillMaxHeight(),
                     colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
                     shape = RoundedCornerShape(16.dp),
                 ) {
-                    Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Column(
+                        modifier = Modifier.padding(14.dp).fillMaxHeight(),
+                        verticalArrangement = Arrangement.spacedBy(4.dp),
+                    ) {
                         Text("平均单价", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.52f))
                         if (avgPrice > 0) {
                             Text("￥${formatAmount(avgPrice)}", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
@@ -550,11 +620,14 @@ internal fun StatsScreen(
                     }
                 }
                 Card(
-                    modifier = Modifier.weight(1f),
+                    modifier = Modifier.weight(1f).fillMaxHeight(),
                     colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
                     shape = RoundedCornerShape(16.dp),
                 ) {
-                    Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Column(
+                        modifier = Modifier.padding(14.dp).fillMaxHeight(),
+                        verticalArrangement = Arrangement.spacedBy(4.dp),
+                    ) {
                         Text("最贵一杯", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.52f))
                         if (mostExpensive != null && parseAmount(mostExpensive.amountYuan) > 0) {
                             Text("￥${mostExpensive.amountYuan}", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
@@ -592,11 +665,19 @@ internal fun StatsScreen(
                                     selected = sortBySpending,
                                     onClick = { sortBySpending = true },
                                     label = { Text("花费") },
+                                    colors = FilterChipDefaults.filterChipColors(
+                                        selectedContainerColor = MaterialTheme.colorScheme.primary,
+                                        selectedLabelColor = MaterialTheme.colorScheme.onPrimary,
+                                    ),
                                 )
                                 FilterChip(
                                     selected = !sortBySpending,
                                     onClick = { sortBySpending = false },
                                     label = { Text("杯数") },
+                                    colors = FilterChipDefaults.filterChipColors(
+                                        selectedContainerColor = MaterialTheme.colorScheme.primary,
+                                        selectedLabelColor = MaterialTheme.colorScheme.onPrimary,
+                                    ),
                                 )
                             }
                         }
@@ -710,6 +791,26 @@ internal fun StatsScreen(
                 )
             }
         }
+    }
+
+    if (showAnchorPickerDialog) {
+        val anchorMillis = when (mode) {
+            StatsMode.Week -> weekAnchorMillis
+            StatsMode.Month -> monthAnchorMillis
+            StatsMode.Year -> yearAnchorMillis
+        }
+        CaramelDatePickerDialog(
+            initialMillis = anchorMillis,
+            onConfirm = { picked ->
+                when (mode) {
+                    StatsMode.Week -> onWeekAnchorChange(picked)
+                    StatsMode.Month -> onMonthAnchorChange(startOfMonth(picked))
+                    StatsMode.Year -> onYearAnchorChange(startOfYear(picked))
+                }
+                showAnchorPickerDialog = false
+            },
+            onDismiss = { showAnchorPickerDialog = false },
+        )
     }
 }
 
