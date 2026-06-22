@@ -43,8 +43,8 @@ android {
         applicationId = "com.example.appdemo"
         minSdk = libs.versions.android.minSdk.get().toInt()
         targetSdk = libs.versions.android.targetSdk.get().toInt()
-        versionCode = 5
-        versionName = "2.01"
+        versionCode = 210
+        versionName = "2.10"
     }
 
     packaging {

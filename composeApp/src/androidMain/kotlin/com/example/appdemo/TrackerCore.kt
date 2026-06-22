@@ -1,7 +1,5 @@
 package com.example.appdemo
 
-import android.app.DatePickerDialog
-import android.app.TimePickerDialog
 import android.content.Context
 import org.json.JSONArray
 import org.json.JSONObject
@@ -17,6 +15,7 @@ enum class HomeScreen {
     Calendar,
     Records,
     Stats,
+    Backup,
 }
 
 enum class StatsMode {
@@ -189,87 +188,6 @@ internal fun mergeDateWithCurrentClock(dayStartMillis: Long): Long {
         set(Calendar.SECOND, 0)
         set(Calendar.MILLISECOND, 0)
     }.timeInMillis
-}
-
-internal fun showMonthPicker(
-    context: Context,
-    currentMonthMillis: Long,
-    onSelectedMonthStart: (Long) -> Unit,
-) {
-    val calendar = Calendar.getInstance().apply { timeInMillis = currentMonthMillis }
-    DatePickerDialog(
-        context,
-        { _, year, monthOfYear, _ ->
-            val picked = Calendar.getInstance().apply {
-                set(Calendar.YEAR, year)
-                set(Calendar.MONTH, monthOfYear)
-                set(Calendar.DAY_OF_MONTH, 1)
-                set(Calendar.HOUR_OF_DAY, 0)
-                set(Calendar.MINUTE, 0)
-                set(Calendar.SECOND, 0)
-                set(Calendar.MILLISECOND, 0)
-            }
-            onSelectedMonthStart(picked.timeInMillis)
-        },
-        calendar.get(Calendar.YEAR),
-        calendar.get(Calendar.MONTH),
-        1,
-    ).show()
-}
-
-internal fun showYearPicker(
-    context: Context,
-    currentYearMillis: Long,
-    onSelectedYearStart: (Long) -> Unit,
-) {
-    showDatePicker(context, currentYearMillis) { picked ->
-        onSelectedYearStart(startOfYear(picked))
-    }
-}
-
-internal fun showDatePicker(
-    context: Context,
-    currentMillis: Long,
-    onSelected: (Long) -> Unit,
-) {
-    val calendar = Calendar.getInstance().apply { timeInMillis = currentMillis }
-    DatePickerDialog(
-        context,
-        { _, year, monthOfYear, dayOfMonth ->
-            val updated = Calendar.getInstance().apply {
-                timeInMillis = currentMillis
-                set(Calendar.YEAR, year)
-                set(Calendar.MONTH, monthOfYear)
-                set(Calendar.DAY_OF_MONTH, dayOfMonth)
-            }
-            onSelected(updated.timeInMillis)
-        },
-        calendar.get(Calendar.YEAR),
-        calendar.get(Calendar.MONTH),
-        calendar.get(Calendar.DAY_OF_MONTH),
-    ).show()
-}
-
-internal fun showTimePicker(
-    context: Context,
-    currentMillis: Long,
-    onSelected: (Long) -> Unit,
-) {
-    val calendar = Calendar.getInstance().apply { timeInMillis = currentMillis }
-    TimePickerDialog(
-        context,
-        { _, hourOfDay, minute ->
-            val updated = Calendar.getInstance().apply {
-                timeInMillis = currentMillis
-                set(Calendar.HOUR_OF_DAY, hourOfDay)
-                set(Calendar.MINUTE, minute)
-            }
-            onSelected(updated.timeInMillis)
-        },
-        calendar.get(Calendar.HOUR_OF_DAY),
-        calendar.get(Calendar.MINUTE),
-        true,
-    ).show()
 }
 
 internal fun StatsMode.displayName(): String {

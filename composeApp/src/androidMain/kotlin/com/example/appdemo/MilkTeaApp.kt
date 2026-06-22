@@ -98,6 +98,7 @@ internal fun MilkTeaAppEntry() {
         HomeScreen.Calendar -> "喝了么"
         HomeScreen.Records -> "记录"
         HomeScreen.Stats -> "统计"
+        HomeScreen.Backup -> "云备份"
     }
 
     val isDark = isSystemInDarkTheme()
@@ -186,6 +187,19 @@ internal fun MilkTeaAppEntry() {
                     },
                     label = { Text("统计") },
                 )
+                NavigationBarItem(
+                    selected = currentScreen == HomeScreen.Backup,
+                    onClick = { currentScreenName = HomeScreen.Backup.name },
+                    icon = {
+                        Icon(
+                            painter = painterResource(R.drawable.nav_cloud),
+                            contentDescription = "云备份",
+                            modifier = Modifier.size(22.dp),
+                            tint = Color.Unspecified,
+                        )
+                    },
+                    label = { Text("云备份") },
+                )
             }
         },
     ) { innerPadding ->
@@ -271,6 +285,15 @@ internal fun MilkTeaAppEntry() {
                         onWeekAnchorChange = { weekAnchorMillis = it },
                         onMonthAnchorChange = { monthAnchorMillis = it },
                         onYearAnchorChange = { yearAnchorMillis = it },
+                    )
+                }
+
+                HomeScreen.Backup -> {
+                    WebDavBackupScreen(
+                        backupFileName = "milk-tea-records.backup",
+                        recordsKey = "records",
+                        recordType = "奶茶记录",
+                        onRestored = { records = loadRecords(context) },
                     )
                 }
             }
