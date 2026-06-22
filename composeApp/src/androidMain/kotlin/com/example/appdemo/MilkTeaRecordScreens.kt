@@ -74,126 +74,46 @@ internal fun RecordsScreen(
     onRecordClick: (MilkTeaRecord) -> Unit,
 ) {
     var showDatePickerDialog by remember { mutableStateOf(false) }
-    var showTimePickerDialog by remember { mutableStateOf(false) }
+    var selectedTab by rememberSaveable { mutableStateOf(0) }
 
-    LazyColumn(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(horizontal = 12.dp, vertical = 6.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp),
-    ) {
-        item {
-            Text("新增记录", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
-        }
-        item {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(RoundedCornerShape(20.dp))
-                    .background(MaterialTheme.colorScheme.surface)
-                    .border(1.dp, MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(20.dp))
-                    .padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp),
-            ) {
-                OutlinedTextField(
-                    value = brandInput,
-                    onValueChange = onBrandInputChange,
-                    label = { Text("品牌/店名") },
-                    placeholder = { Text("例如：喜茶、奈雪、霸王茶姬") },
-                    modifier = Modifier.fillMaxWidth(),
-                    singleLine = true,
-                )
-                ProductNameField(
-                    value = productNameInput,
-                    onValueChange = onProductNameChange,
-                    suggestionSource = records,
-                    modifier = Modifier.fillMaxWidth(),
-                )
-                OutlinedTextField(
-                    value = amountInput,
-                    onValueChange = onAmountInputChange,
-                    label = { Text("金额（元）") },
-                    placeholder = { Text("例如：18.5") },
-                    modifier = Modifier.fillMaxWidth(),
-                    singleLine = true,
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                )
-                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    Text(
-                        "喝奶茶时间：${formatTime(selectedDrinkTimeMillis)}",
-                        style = MaterialTheme.typography.bodyMedium,
-                    )
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Box(
-                            modifier = Modifier
-                                .clip(RoundedCornerShape(20.dp))
-                                .background(MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.7f))
-                                .border(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.30f), RoundedCornerShape(20.dp))
-                                .clickable { showDatePickerDialog = true }
-                                .padding(horizontal = 12.dp, vertical = 6.dp),
-                        ) { Text("选日期", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.SemiBold) }
-                        Box(
-                            modifier = Modifier
-                                .clip(RoundedCornerShape(20.dp))
-                                .background(MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.7f))
-                                .border(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.30f), RoundedCornerShape(20.dp))
-                                .clickable { showTimePickerDialog = true }
-                                .padding(horizontal = 12.dp, vertical = 6.dp),
-                        ) { Text("选时间", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.SemiBold) }
-                        Box(
-                            modifier = Modifier
-                                .clip(RoundedCornerShape(20.dp))
-                                .background(MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.7f))
-                                .border(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.30f), RoundedCornerShape(20.dp))
-                                .clickable { onDrinkTimeChange(System.currentTimeMillis()) }
-                                .padding(horizontal = 12.dp, vertical = 6.dp),
-                        ) { Text("现在", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.SemiBold) }
-                    }
-                }
-                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    Text("糖度", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    ChoiceChips(options = sugarOptions, selectedOption = selectedSugar, onSelect = onSugarSelect)
-                }
-                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    Text("温度/冰度", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    ChoiceChips(options = iceOptions, selectedOption = selectedIce, onSelect = onIceSelect)
-                }
-                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    Text("杯型", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    ChoiceChips(options = cupSizeOptions, selectedOption = selectedCupSize, onSelect = onCupSizeSelect)
-                }
-                OutlinedTextField(
-                    value = noteInput,
-                    onValueChange = onNoteInputChange,
-                    label = { Text("备注") },
-                    placeholder = { Text("例如：加珍珠、少奶、排队很久") },
-                    modifier = Modifier.fillMaxWidth(),
-                    maxLines = 2,
-                )
-                Button(
-                    onClick = onSave,
-                    enabled = brandInput.trim().isNotEmpty(),
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(12.dp),
-                ) {
-                    Text("记录一次", fontWeight = FontWeight.Bold)
-                }
-            }
+    Column(modifier = Modifier.fillMaxSize()) {
+        TabRow(selectedTabIndex = selectedTab) {
+            Tab(
+                selected = selectedTab == 0,
+                onClick = { selectedTab = 0 },
+                text = { Text("新增记录") },
+            )
+            Tab(
+                selected = selectedTab == 1,
+                onClick = { selectedTab = 1 },
+                text = { Text("全部记录") },
+            )
         }
 
-        item {
-            Spacer(modifier = Modifier.height(6.dp))
-            Text("全部记录", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
-        }
-
-        if (records.isEmpty()) {
-            item {
-                Text("还没有记录，先打第一杯吧。")
-            }
+        if (selectedTab == 0) {
+            AddRecordPane(
+                records = records,
+                brandInput = brandInput,
+                productNameInput = productNameInput,
+                amountInput = amountInput,
+                noteInput = noteInput,
+                selectedSugar = selectedSugar,
+                selectedIce = selectedIce,
+                selectedCupSize = selectedCupSize,
+                selectedDrinkTimeMillis = selectedDrinkTimeMillis,
+                onBrandInputChange = onBrandInputChange,
+                onProductNameChange = onProductNameChange,
+                onAmountInputChange = onAmountInputChange,
+                onNoteInputChange = onNoteInputChange,
+                onSugarSelect = onSugarSelect,
+                onIceSelect = onIceSelect,
+                onCupSizeSelect = onCupSizeSelect,
+                onShowDatePicker = { showDatePickerDialog = true },
+                onDrinkTimeChange = onDrinkTimeChange,
+                onSave = onSave,
+            )
         } else {
-            items(records, key = { it.id }) { record ->
-                RecordTagCard(record = record, onClick = { onRecordClick(record) })
-            }
+            AllRecordsPane(records = records, onRecordClick = onRecordClick)
         }
     }
 
@@ -204,12 +124,193 @@ internal fun RecordsScreen(
             onDismiss = { showDatePickerDialog = false },
         )
     }
-    if (showTimePickerDialog) {
-        CaramelTimePickerDialog(
-            initialMillis = selectedDrinkTimeMillis,
-            onConfirm = { onDrinkTimeChange(it); showTimePickerDialog = false },
-            onDismiss = { showTimePickerDialog = false },
-        )
+}
+
+@Composable
+private fun AddRecordPane(
+    records: List<MilkTeaRecord>,
+    brandInput: String,
+    productNameInput: String,
+    amountInput: String,
+    noteInput: String,
+    selectedSugar: String,
+    selectedIce: String,
+    selectedCupSize: String,
+    selectedDrinkTimeMillis: Long,
+    onBrandInputChange: (String) -> Unit,
+    onProductNameChange: (String) -> Unit,
+    onAmountInputChange: (String) -> Unit,
+    onNoteInputChange: (String) -> Unit,
+    onSugarSelect: (String) -> Unit,
+    onIceSelect: (String) -> Unit,
+    onCupSizeSelect: (String) -> Unit,
+    onShowDatePicker: () -> Unit,
+    onDrinkTimeChange: (Long) -> Unit,
+    onSave: () -> Unit,
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .verticalScroll(rememberScrollState())
+            .padding(horizontal = 12.dp, vertical = 12.dp),
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(20.dp))
+                .background(MaterialTheme.colorScheme.surface)
+                .border(1.dp, MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(20.dp))
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            OutlinedTextField(
+                value = brandInput,
+                onValueChange = onBrandInputChange,
+                label = { Text("品牌/店名") },
+                placeholder = { Text("例如：喜茶、奈雪、霸王茶姬") },
+                modifier = Modifier.fillMaxWidth(),
+                singleLine = true,
+            )
+            ProductNameField(
+                value = productNameInput,
+                onValueChange = onProductNameChange,
+                suggestionSource = records,
+                modifier = Modifier.fillMaxWidth(),
+            )
+            OutlinedTextField(
+                value = amountInput,
+                onValueChange = onAmountInputChange,
+                label = { Text("金额（元）") },
+                placeholder = { Text("例如：18.5") },
+                modifier = Modifier.fillMaxWidth(),
+                singleLine = true,
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+            )
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Text(
+                    "喝奶茶时间：${formatDateWithPeriod(selectedDrinkTimeMillis)}",
+                    style = MaterialTheme.typography.bodyMedium,
+                )
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(20.dp))
+                            .background(MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.7f))
+                            .border(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.30f), RoundedCornerShape(20.dp))
+                            .clickable { onShowDatePicker() }
+                            .padding(horizontal = 12.dp, vertical = 6.dp),
+                    ) { Text("选日期", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.SemiBold) }
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(20.dp))
+                            .background(MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.7f))
+                            .border(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.30f), RoundedCornerShape(20.dp))
+                            .clickable { onDrinkTimeChange(System.currentTimeMillis()) }
+                            .padding(horizontal = 12.dp, vertical = 6.dp),
+                    ) { Text("现在", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.SemiBold) }
+                }
+                ChoiceChips(
+                    options = dayPeriodOptions,
+                    selectedOption = dayPeriodLabel(selectedDrinkTimeMillis),
+                    onSelect = { onDrinkTimeChange(withDayPeriod(selectedDrinkTimeMillis, it)) },
+                )
+            }
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Text("糖度", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                ChoiceChips(options = sugarOptions, selectedOption = selectedSugar, onSelect = onSugarSelect)
+            }
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Text("温度/冰度", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                ChoiceChips(options = iceOptions, selectedOption = selectedIce, onSelect = onIceSelect)
+            }
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Text("杯型", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                ChoiceChips(options = cupSizeOptions, selectedOption = selectedCupSize, onSelect = onCupSizeSelect)
+            }
+            OutlinedTextField(
+                value = noteInput,
+                onValueChange = onNoteInputChange,
+                label = { Text("备注") },
+                placeholder = { Text("例如：加珍珠、少奶、排队很久") },
+                modifier = Modifier.fillMaxWidth(),
+                maxLines = 2,
+            )
+            Button(
+                onClick = onSave,
+                enabled = brandInput.trim().isNotEmpty(),
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(12.dp),
+            ) {
+                Text("记录一杯", fontWeight = FontWeight.Bold)
+            }
+        }
+    }
+}
+
+@Composable
+private fun AllRecordsPane(
+    records: List<MilkTeaRecord>,
+    onRecordClick: (MilkTeaRecord) -> Unit,
+) {
+    var keyword by rememberSaveable { mutableStateOf("") }
+
+    val filteredRecords = remember(records, keyword) {
+        val trimmed = keyword.trim()
+        if (trimmed.isEmpty()) {
+            records
+        } else {
+            records.filter {
+                it.brand.contains(trimmed, ignoreCase = true) ||
+                    it.productName.contains(trimmed, ignoreCase = true) ||
+                    it.note.contains(trimmed, ignoreCase = true)
+            }
+        }
+    }
+
+    val groupedByMonth = remember(filteredRecords) {
+        filteredRecords.groupBy { startOfMonth(it.drinkTimeMillis) }
+    }
+
+    LazyColumn(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(horizontal = 12.dp, vertical = 8.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        item {
+            OutlinedTextField(
+                value = keyword,
+                onValueChange = { keyword = it },
+                label = { Text("搜索品牌、品名或备注") },
+                placeholder = { Text("例如：苦瓜、喜茶") },
+                modifier = Modifier.fillMaxWidth(),
+                singleLine = true,
+            )
+        }
+
+        if (filteredRecords.isEmpty()) {
+            item {
+                Text(
+                    if (records.isEmpty()) "还没有记录，先打第一杯吧。" else "没有匹配的记录。",
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        } else {
+            groupedByMonth.forEach { (monthStart, monthRecords) ->
+                item(key = "header_$monthStart") {
+                    Text(
+                        formatMonth(monthStart),
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.padding(top = 4.dp),
+                    )
+                }
+                items(monthRecords, key = { it.id }) { record ->
+                    RecordTagCard(record = record, onClick = { onRecordClick(record) })
+                }
+            }
+        }
     }
 }
 
@@ -282,7 +383,6 @@ internal fun EditRecordDialog(
     var cupSize by rememberSaveable(original.id) { mutableStateOf(original.cupSize) }
     var drinkTimeMillis by rememberSaveable(original.id) { mutableStateOf(original.drinkTimeMillis) }
     var showDatePickerDialog by remember { mutableStateOf(false) }
-    var showTimePickerDialog by remember { mutableStateOf(false) }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -315,15 +415,17 @@ internal fun EditRecordDialog(
                     singleLine = true,
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                 )
-                Text("时间：${formatTime(drinkTimeMillis)}")
+                Text("时间：${formatDateWithPeriod(drinkTimeMillis)}")
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     TextButton(onClick = { showDatePickerDialog = true }) {
                         Text("选日期")
                     }
-                    TextButton(onClick = { showTimePickerDialog = true }) {
-                        Text("选时间")
-                    }
                 }
+                ChoiceChips(
+                    options = dayPeriodOptions,
+                    selectedOption = dayPeriodLabel(drinkTimeMillis),
+                    onSelect = { drinkTimeMillis = withDayPeriod(drinkTimeMillis, it) },
+                )
                 Text("糖度")
                 ChoiceChips(
                     options = sugarOptions,
@@ -384,13 +486,6 @@ internal fun EditRecordDialog(
             initialMillis = drinkTimeMillis,
             onConfirm = { drinkTimeMillis = it; showDatePickerDialog = false },
             onDismiss = { showDatePickerDialog = false },
-        )
-    }
-    if (showTimePickerDialog) {
-        CaramelTimePickerDialog(
-            initialMillis = drinkTimeMillis,
-            onConfirm = { drinkTimeMillis = it; showTimePickerDialog = false },
-            onDismiss = { showTimePickerDialog = false },
         )
     }
 }
@@ -861,7 +956,7 @@ private fun RecordTagCard(
             if (record.productName.isNotBlank()) {
                 Text(record.productName, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
-            Text(formatTime(record.drinkTimeMillis), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f))
+            Text(formatDateWithPeriod(record.drinkTimeMillis), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f))
             Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 AssistChip(onClick = {}, label = { Text(record.cupSize) })
                 AssistChip(onClick = {}, label = { Text(record.sugarLevel) })

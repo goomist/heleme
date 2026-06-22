@@ -104,6 +104,36 @@ internal fun formatTime(timeMillis: Long): String {
     return formatter.format(Date(timeMillis))
 }
 
+internal val dayPeriodOptions = listOf("早上", "下午", "晚上")
+
+internal fun dayPeriodLabel(timeMillis: Long): String {
+    val hour = Calendar.getInstance().apply { timeInMillis = timeMillis }.get(Calendar.HOUR_OF_DAY)
+    return when {
+        hour < 12 -> "早上"
+        hour < 18 -> "下午"
+        else -> "晚上"
+    }
+}
+
+internal fun withDayPeriod(timeMillis: Long, period: String): Long {
+    val representativeHour = when (period) {
+        "早上" -> 9
+        "下午" -> 15
+        else -> 20
+    }
+    return Calendar.getInstance().apply {
+        this.timeInMillis = timeMillis
+        set(Calendar.HOUR_OF_DAY, representativeHour)
+        set(Calendar.MINUTE, 0)
+        set(Calendar.SECOND, 0)
+        set(Calendar.MILLISECOND, 0)
+    }.timeInMillis
+}
+
+internal fun formatDateWithPeriod(timeMillis: Long): String {
+    return "${formatDate(timeMillis)} ${dayPeriodLabel(timeMillis)}"
+}
+
 internal fun formatAmount(amount: Double): String {
     return if (amount % 1.0 == 0.0) {
         amount.toInt().toString()

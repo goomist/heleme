@@ -306,7 +306,7 @@ internal fun MilkTeaAppEntry() {
             title = { Text("详情") },
             text = {
                 androidx.compose.foundation.layout.Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    Text("时间：${formatTime(record.drinkTimeMillis)}")
+                    Text("时间：${formatDateWithPeriod(record.drinkTimeMillis)}")
                     Text("品牌：${record.brand}")
                     Text("品名：${if (record.productName.isBlank()) "未填写" else record.productName}")
                     Text("杯型：${record.cupSize}")
@@ -650,7 +650,7 @@ private fun MilkTeaRecordTagCard(
             if (record.productName.isNotBlank()) {
                 Text(record.productName, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
-            Text(formatTime(record.drinkTimeMillis), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f))
+            Text(formatDateWithPeriod(record.drinkTimeMillis), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f))
             Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 AssistChip(onClick = {}, label = { Text(record.cupSize) })
                 AssistChip(onClick = {}, label = { Text(record.sugarLevel) })
