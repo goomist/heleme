@@ -29,12 +29,10 @@ import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.foundation.isSystemInDarkTheme
-import androidx.compose.material3.darkColorScheme
-import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -59,7 +57,10 @@ import java.util.Locale
 internal fun MilkTeaAppEntry() {
     val context = LocalContext.current
 
-    var records by remember { mutableStateOf(loadRecords(context)) }
+    var language by rememberSaveable { mutableStateOf(loadLanguage(context).name) }
+    val strings = remember(language) { stringsFor(AppLanguage.valueOf(language)) }
+
+    var records by remember { mutableStateOf(loadAndPurgeRecords(context)) }
     var selectedRecord by remember { mutableStateOf<MilkTeaRecord?>(null) }
     var editingRecord by remember { mutableStateOf<MilkTeaRecord?>(null) }
 
@@ -86,53 +87,23 @@ internal fun MilkTeaAppEntry() {
     val statsMode = remember(statsModeName) { StatsMode.valueOf(statsModeName) }
     val todayStart = remember { startOfDay(System.currentTimeMillis()) }
 
-    val recordsByDayCount = remember(records) {
-        records.groupingBy { startOfDay(it.drinkTimeMillis) }.eachCount()
+    val activeRecords = remember(records) {
+        records.filter { it.deletedAtMillis == 0L }
     }
-    val selectedDayRecords = remember(records, selectedDayStart) {
-        records.filter { startOfDay(it.drinkTimeMillis) == selectedDayStart }
+    val recordsByDayCount = remember(activeRecords) {
+        activeRecords.groupingBy { startOfDay(it.drinkTimeMillis) }.eachCount()
+    }
+    val selectedDayRecords = remember(activeRecords, selectedDayStart) {
+        activeRecords.filter { startOfDay(it.drinkTimeMillis) == selectedDayStart }
             .sortedByDescending { it.drinkTimeMillis }
-    }
-
-    val title = when (currentScreen) {
-        HomeScreen.Calendar -> "喝了么"
-        HomeScreen.Records -> "记录"
-        HomeScreen.Stats -> "统计"
-        HomeScreen.Backup -> "云备份"
     }
 
     val isDark = isSystemInDarkTheme()
     MaterialTheme(
-        colorScheme = if (isDark) darkColorScheme(
-            primary = Color(0xFFD4956A),
-            onPrimary = Color(0xFF3D1A00),
-            primaryContainer = Color(0xFF5C3520),
-            onPrimaryContainer = Color(0xFFF3DFB0),
-            secondary = Color(0xFFC1926B),
-            onSecondary = Color(0xFF3D1A00),
-            background = Color(0xFF1A1208),
-            surface = Color(0xFF241A10),
-            surfaceVariant = Color(0xFF3A2A1A),
-            onBackground = Color(0xFFF5E6CC),
-            onSurface = Color(0xFFF5E6CC),
-            onSurfaceVariant = Color(0xFFD4B896),
-        ) else lightColorScheme(
-            primary = Color(0xFFB07240),
-            onPrimary = Color.White,
-            primaryContainer = Color(0xFFF3DFB0),
-            onPrimaryContainer = Color(0xFF3D2000),
-            secondary = Color(0xFFC1926B),
-            onSecondary = Color.White,
-            background = Color(0xFFFAF3EA),
-            surface = Color(0xFFFFF9F0),
-            surfaceVariant = Color(0xFFF0E0CC),
-            onBackground = Color(0xFF2D1A00),
-            onSurface = Color(0xFF2D1A00),
-            onSurfaceVariant = Color(0xFF7A5236),
-        ),
+        colorScheme = if (isDark) MilkTeaDarkColorScheme else MilkTeaLightColorScheme,
     ) {
+    CompositionLocalProvider(LocalMilkTeaStrings provides strings) {
     Scaffold(
-        topBar = { TopAppBar(title = { Text(title) }) },
         floatingActionButton = {
             if (currentScreen == HomeScreen.Calendar) {
                 FloatingActionButton(
@@ -142,7 +113,7 @@ internal fun MilkTeaAppEntry() {
                         monthStartMillis = startOfMonth(today)
                     },
                 ) {
-                    Text("今天")
+                    Text(strings.today)
                 }
             }
         },
@@ -153,52 +124,48 @@ internal fun MilkTeaAppEntry() {
                     onClick = { currentScreenName = HomeScreen.Calendar.name },
                     icon = {
                         Icon(
-                            painter = painterResource(R.drawable.nav_calendar),
-                            contentDescription = "日历",
-                            modifier = Modifier.size(22.dp),
-                            tint = Color.Unspecified,
+                            painter = painterResource(R.drawable.milktea_nav_calendar),
+                            contentDescription = strings.navCalendar,
+                            modifier = Modifier.size(24.dp),
                         )
                     },
-                    label = { Text("日历") },
+                    label = { Text(strings.navCalendar) },
                 )
                 NavigationBarItem(
                     selected = currentScreen == HomeScreen.Records,
                     onClick = { currentScreenName = HomeScreen.Records.name },
                     icon = {
                         Icon(
-                            painter = painterResource(R.drawable.nav_record),
-                            contentDescription = "记录",
-                            modifier = Modifier.size(22.dp),
-                            tint = Color.Unspecified,
+                            painter = painterResource(R.drawable.milktea_nav_drink),
+                            contentDescription = strings.navRecords,
+                            modifier = Modifier.size(24.dp),
                         )
                     },
-                    label = { Text("记录") },
+                    label = { Text(strings.navRecords) },
                 )
                 NavigationBarItem(
                     selected = currentScreen == HomeScreen.Stats,
                     onClick = { currentScreenName = HomeScreen.Stats.name },
                     icon = {
                         Icon(
-                            painter = painterResource(R.drawable.nav_stats),
-                            contentDescription = "统计",
-                            modifier = Modifier.size(22.dp),
-                            tint = Color.Unspecified,
+                            painter = painterResource(R.drawable.milktea_nav_stats),
+                            contentDescription = strings.navStats,
+                            modifier = Modifier.size(24.dp),
                         )
                     },
-                    label = { Text("统计") },
+                    label = { Text(strings.navStats) },
                 )
                 NavigationBarItem(
-                    selected = currentScreen == HomeScreen.Backup,
-                    onClick = { currentScreenName = HomeScreen.Backup.name },
+                    selected = currentScreen == HomeScreen.Settings,
+                    onClick = { currentScreenName = HomeScreen.Settings.name },
                     icon = {
                         Icon(
-                            painter = painterResource(R.drawable.nav_cloud),
-                            contentDescription = "云备份",
-                            modifier = Modifier.size(22.dp),
-                            tint = Color.Unspecified,
+                            painter = painterResource(R.drawable.milktea_nav_settings),
+                            contentDescription = strings.navSettings,
+                            modifier = Modifier.size(24.dp),
                         )
                     },
-                    label = { Text("云备份") },
+                    label = { Text(strings.navSettings) },
                 )
             }
         },
@@ -223,7 +190,7 @@ internal fun MilkTeaAppEntry() {
 
                 HomeScreen.Records -> {
                     RecordsScreen(
-                        records = records,
+                        records = activeRecords,
                         brandInput = brandInput,
                         productNameInput = productNameInput,
                         amountInput = amountInput,
@@ -276,7 +243,7 @@ internal fun MilkTeaAppEntry() {
 
                 HomeScreen.Stats -> {
                     StatsScreen(
-                        records = records,
+                        records = activeRecords,
                         mode = statsMode,
                         weekAnchorMillis = weekAnchorMillis,
                         monthAnchorMillis = monthAnchorMillis,
@@ -288,12 +255,23 @@ internal fun MilkTeaAppEntry() {
                     )
                 }
 
-                HomeScreen.Backup -> {
-                    WebDavBackupScreen(
-                        backupFileName = "milk-tea-records.backup",
-                        recordsKey = "records",
-                        recordType = "奶茶记录",
-                        onRestored = { records = loadRecords(context) },
+                HomeScreen.Settings -> {
+                    SettingsScreen(
+                        allRecords = records,
+                        onRestoreRecord = { target ->
+                            records = records.map { if (it.id == target.id) it.copy(deletedAtMillis = 0L) else it }
+                            saveRecords(context, records)
+                        },
+                        onPermanentlyDelete = { target ->
+                            records = records.filterNot { it.id == target.id }
+                            saveRecords(context, records)
+                        },
+                        onWebDavRestored = { records = loadAndPurgeRecords(context) },
+                        currentLanguage = AppLanguage.valueOf(language),
+                        onLanguageChange = { picked ->
+                            saveLanguage(context, picked)
+                            language = picked.name
+                        },
                     )
                 }
             }
@@ -303,19 +281,19 @@ internal fun MilkTeaAppEntry() {
     selectedRecord?.let { record ->
         androidx.compose.material3.AlertDialog(
             onDismissRequest = { selectedRecord = null },
-            title = { Text("详情") },
+            title = { Text(strings.detailTitle) },
             text = {
                 androidx.compose.foundation.layout.Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    Text("时间：${formatDateWithPeriod(record.drinkTimeMillis)}")
-                    Text("品牌：${record.brand}")
-                    Text("品名：${if (record.productName.isBlank()) "未填写" else record.productName}")
-                    Text("杯型：${record.cupSize}")
-                    Text("糖度：${record.sugarLevel}")
-                    Text("温度/冰度：${record.iceLevel}")
+                    Text(strings.detailTime(formatDateWithPeriod(record.drinkTimeMillis, strings)))
+                    Text(strings.detailBrand(record.brand))
+                    Text(strings.detailProduct(if (record.productName.isBlank()) strings.notFilled else record.productName))
+                    Text(strings.detailCupSize(strings.cupSize(record.cupSize)))
+                    Text(strings.detailSugar(strings.sugar(record.sugarLevel)))
+                    Text(strings.detailIce(strings.ice(record.iceLevel)))
                     if (record.amountYuan.isNotBlank()) {
-                        Text("金额：${record.amountYuan} 元")
+                        Text(strings.detailAmount(record.amountYuan))
                     }
-                    Text("备注：${if (record.note.isBlank()) "无" else record.note}")
+                    Text(strings.detailNote(if (record.note.isBlank()) strings.none else record.note))
                 }
             },
             confirmButton = {
@@ -326,22 +304,22 @@ internal fun MilkTeaAppEntry() {
                             editingRecord = record
                         },
                     ) {
-                        Text("编辑")
+                        Text(strings.edit)
                     }
                     androidx.compose.material3.TextButton(onClick = { selectedRecord = null }) {
-                        Text("关闭")
+                        Text(strings.close)
                     }
                 }
             },
             dismissButton = {
                 androidx.compose.material3.TextButton(
                     onClick = {
-                        records = records.filterNot { it.id == record.id }
+                        records = records.map { if (it.id == record.id) it.copy(deletedAtMillis = System.currentTimeMillis()) else it }
                         saveRecords(context, records)
                         selectedRecord = null
                     },
                 ) {
-                    Text("删除")
+                    Text(strings.delete)
                 }
             },
         )
@@ -365,7 +343,7 @@ internal fun MilkTeaAppEntry() {
     editingRecord?.let { record ->
         EditRecordDialog(
             original = record,
-            allRecords = records,
+            allRecords = activeRecords,
             onDismiss = { editingRecord = null },
             onSave = { updated ->
                 records = records.map { if (it.id == updated.id) updated else it }
@@ -376,9 +354,8 @@ internal fun MilkTeaAppEntry() {
         )
     }
     }
+    }
 }
-
-private val milkTeaWeekLabels = listOf("一", "二", "三", "四", "五", "六", "日")
 
 @Composable
 private fun MilkTeaCalendarScreen(
@@ -394,6 +371,7 @@ private fun MilkTeaCalendarScreen(
     onAddNew: () -> Unit,
     onRecordClick: (MilkTeaRecord) -> Unit,
 ) {
+    val strings = LocalMilkTeaStrings.current
     val monthCells = remember(monthStartMillis) { milkTeaBuildMonthCells(monthStartMillis) }
 
     LazyColumn(
@@ -412,20 +390,20 @@ private fun MilkTeaCalendarScreen(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
             ) {
-                TextButton(onClick = onPrevMonth) { Text("‹ 上月") }
+                TextButton(onClick = onPrevMonth) { Text(strings.prevMonth) }
                 Text(
-                    text = milkTeaFormatMonth(monthStartMillis),
+                    text = milkTeaFormatMonth(monthStartMillis, strings),
                     style = androidx.compose.material3.MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.SemiBold,
                     modifier = Modifier.clickable(onClick = onPickMonth),
                 )
-                TextButton(onClick = onNextMonth) { Text("下月 ›") }
+                TextButton(onClick = onNextMonth) { Text(strings.nextMonth) }
             }
         }
 
         item {
             Row(modifier = Modifier.fillMaxWidth()) {
-                milkTeaWeekLabels.forEach { label ->
+                strings.weekLabels.forEach { label ->
                     Box(
                         modifier = Modifier
                             .weight(1f)
@@ -466,16 +444,16 @@ private fun MilkTeaCalendarScreen(
                 verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
             ) {
                 Text(
-                    text = "${milkTeaFormatDate(selectedDayStart)} 记录",
+                    text = strings.dayRecordsTitle(milkTeaFormatDate(selectedDayStart, strings)),
                     style = androidx.compose.material3.MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.SemiBold,
                 )
-                TextButton(onClick = onAddNew) { Text("去记录") }
+                TextButton(onClick = onAddNew) { Text(strings.goRecord) }
             }
         }
 
         if (selectedDayRecords.isEmpty()) {
-            item { Text("这天还没有喝奶茶。") }
+            item { Text(strings.noDrinkThisDay) }
         } else {
             items(selectedDayRecords, key = { it.id }) { record ->
                 MilkTeaRecordTagCard(record = record, onClick = { onRecordClick(record) })
@@ -535,18 +513,19 @@ private fun RowScope.MilkTeaDayCellCard(
                 fontWeight = if (isSelected || isToday) FontWeight.Bold else FontWeight.Normal,
                 color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
             )
-            MilkTeaRedDots(count = count)
+            MilkTeaCountDots(count = count)
         }
     }
 }
 
 @Composable
-private fun MilkTeaRedDots(count: Int) {
+private fun MilkTeaCountDots(count: Int) {
     if (count <= 0) {
         Spacer(modifier = Modifier.height(8.dp))
         return
     }
 
+    val dotColor = MaterialTheme.colorScheme.primary
     val visibleCount = count.coerceAtMost(4)
     Row(
         horizontalArrangement = Arrangement.spacedBy(3.dp),
@@ -556,14 +535,14 @@ private fun MilkTeaRedDots(count: Int) {
             Box(
                 modifier = Modifier
                     .size(6.dp)
-                    .background(Color(0xFFD32F2F), CircleShape),
+                    .background(dotColor, CircleShape),
             )
         }
         if (count > visibleCount) {
             Text(
                 text = "+${count - visibleCount}",
                 style = androidx.compose.material3.MaterialTheme.typography.labelSmall,
-                color = Color(0xFFD32F2F),
+                color = dotColor,
             )
         }
     }
@@ -572,8 +551,7 @@ private fun MilkTeaRedDots(count: Int) {
 private fun milkTeaBuildMonthCells(monthStartMillis: Long): List<CalendarDayCell> {
     val calendar = Calendar.getInstance().apply { timeInMillis = monthStartMillis }
     val daysInMonth = calendar.getActualMaximum(Calendar.DAY_OF_MONTH)
-    val firstDayOfWeek = calendar.get(Calendar.DAY_OF_WEEK)
-    val leadingEmptyCells = (firstDayOfWeek + 5) % 7
+    val leadingEmptyCells = weekDayOffset(calendar.get(Calendar.DAY_OF_WEEK))
 
     val cells = mutableListOf<CalendarDayCell>()
     repeat(leadingEmptyCells) {
@@ -593,13 +571,13 @@ private fun milkTeaBuildMonthCells(monthStartMillis: Long): List<CalendarDayCell
     return cells
 }
 
-private fun milkTeaFormatMonth(timeMillis: Long): String {
-    val formatter = SimpleDateFormat("yyyy年MM月", Locale.getDefault())
+private fun milkTeaFormatMonth(timeMillis: Long, strings: MilkTeaStrings): String {
+    val formatter = SimpleDateFormat(strings.monthPattern, strings.locale)
     return formatter.format(Date(timeMillis))
 }
 
-private fun milkTeaFormatDate(timeMillis: Long): String {
-    val formatter = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
+private fun milkTeaFormatDate(timeMillis: Long, strings: MilkTeaStrings): String {
+    val formatter = SimpleDateFormat(strings.datePattern, strings.locale)
     return formatter.format(Date(timeMillis))
 }
 
@@ -608,6 +586,7 @@ private fun MilkTeaRecordTagCard(
     record: MilkTeaRecord,
     onClick: () -> Unit,
 ) {
+    val strings = LocalMilkTeaStrings.current
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -650,14 +629,14 @@ private fun MilkTeaRecordTagCard(
             if (record.productName.isNotBlank()) {
                 Text(record.productName, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
-            Text(formatDateWithPeriod(record.drinkTimeMillis), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f))
+            Text(formatDateWithPeriod(record.drinkTimeMillis, strings), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f))
             Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                AssistChip(onClick = {}, label = { Text(record.cupSize) })
-                AssistChip(onClick = {}, label = { Text(record.sugarLevel) })
-                AssistChip(onClick = {}, label = { Text(record.iceLevel) })
+                AssistChip(onClick = {}, label = { Text(strings.cupSize(record.cupSize)) })
+                AssistChip(onClick = {}, label = { Text(strings.sugar(record.sugarLevel)) })
+                AssistChip(onClick = {}, label = { Text(strings.ice(record.iceLevel)) })
             }
             if (record.note.isNotBlank()) {
-                Text("备注：${record.note}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f))
+                Text(strings.noteLine(record.note), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f))
             }
         }
     }

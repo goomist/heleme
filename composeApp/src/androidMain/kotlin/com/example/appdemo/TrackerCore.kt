@@ -8,14 +8,14 @@ import java.util.Calendar
 import java.util.Date
 import java.util.Locale
 
-private const val MILK_TEA_PREFS_NAME = "milk_tea_tracker"
+internal const val MILK_TEA_PREFS_NAME = "milk_tea_tracker"
 private const val MILK_TEA_RECORDS_KEY = "records"
 
 enum class HomeScreen {
     Calendar,
     Records,
     Stats,
-    Backup,
+    Settings,
 }
 
 enum class StatsMode {
@@ -23,6 +23,8 @@ enum class StatsMode {
     Month,
     Year,
 }
+
+internal const val TRASH_RETENTION_DAYS = 30
 
 data class MilkTeaRecord(
     val id: Long,
@@ -34,6 +36,7 @@ data class MilkTeaRecord(
     val cupSize: String,
     val amountYuan: String,
     val note: String,
+    val deletedAtMillis: Long = 0L,
 )
 
 data class CalendarDayCell(
@@ -53,11 +56,17 @@ data class TrendSeries(
     val values: List<Double>,
 )
 
+// The week starts on Sunday everywhere: calendar grids, week stats, and the labels above them.
+// This matches the platform DatePicker used when picking a record's date.
+internal const val WEEK_START_DAY = Calendar.SUNDAY
+
+/** Position of [dayOfWeek] (a Calendar.DAY_OF_WEEK value) within the week, 0 = week start. */
+internal fun weekDayOffset(dayOfWeek: Int): Int = (dayOfWeek - WEEK_START_DAY + 7) % 7
+
 internal fun buildMonthCells(monthStartMillis: Long): List<CalendarDayCell> {
     val calendar = Calendar.getInstance().apply { timeInMillis = monthStartMillis }
     val daysInMonth = calendar.getActualMaximum(Calendar.DAY_OF_MONTH)
-    val firstDayOfWeek = calendar.get(Calendar.DAY_OF_WEEK)
-    val leadingEmptyCells = (firstDayOfWeek + 5) % 7
+    val leadingEmptyCells = weekDayOffset(calendar.get(Calendar.DAY_OF_WEEK))
 
     val cells = mutableListOf<CalendarDayCell>()
     repeat(leadingEmptyCells) {
@@ -74,36 +83,40 @@ internal fun buildMonthCells(monthStartMillis: Long): List<CalendarDayCell> {
     return cells
 }
 
-internal fun formatMonth(timeMillis: Long): String {
-    val formatter = SimpleDateFormat("yyyy年MM月", Locale.getDefault())
+// `strings` carries the language picked in Settings, along with that language's date patterns
+// and Locale. It defaults to Simplified Chinese so call sites outside a composition still work.
+internal fun formatMonth(timeMillis: Long, strings: MilkTeaStrings = MilkTeaStringsZhHans): String {
+    val formatter = SimpleDateFormat(strings.monthPattern, strings.locale)
     return formatter.format(Date(timeMillis))
 }
 
-internal fun formatYear(timeMillis: Long): String {
-    val formatter = SimpleDateFormat("yyyy年", Locale.getDefault())
+internal fun formatYear(timeMillis: Long, strings: MilkTeaStrings = MilkTeaStringsZhHans): String {
+    val formatter = SimpleDateFormat(strings.yearPattern, strings.locale)
     return formatter.format(Date(timeMillis))
 }
 
-internal fun formatMonthDay(timeMillis: Long): String {
-    val formatter = SimpleDateFormat("MM-dd", Locale.getDefault())
+internal fun formatMonthDay(timeMillis: Long, strings: MilkTeaStrings = MilkTeaStringsZhHans): String {
+    val formatter = SimpleDateFormat(strings.monthDayPattern, strings.locale)
     return formatter.format(Date(timeMillis))
 }
 
-internal fun formatWeekRange(weekStart: Long): String {
+internal fun formatWeekRange(weekStart: Long, strings: MilkTeaStrings = MilkTeaStringsZhHans): String {
     val weekEnd = addDays(weekStart, 6)
-    return "${formatMonthDay(weekStart)} - ${formatMonthDay(weekEnd)}"
+    return "${formatMonthDay(weekStart, strings)} - ${formatMonthDay(weekEnd, strings)}"
 }
 
-internal fun formatDate(timeMillis: Long): String {
-    val formatter = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
+internal fun formatDate(timeMillis: Long, strings: MilkTeaStrings = MilkTeaStringsZhHans): String {
+    val formatter = SimpleDateFormat(strings.datePattern, strings.locale)
     return formatter.format(Date(timeMillis))
 }
 
-internal fun formatTime(timeMillis: Long): String {
-    val formatter = SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault())
+internal fun formatTime(timeMillis: Long, strings: MilkTeaStrings = MilkTeaStringsZhHans): String {
+    val formatter = SimpleDateFormat(strings.timePattern, strings.locale)
     return formatter.format(Date(timeMillis))
 }
 
+// Canonical keys, not display text: they are compared against stored values and fed to
+// withDayPeriod. MilkTeaStrings.dayPeriod turns one into the label the user sees.
 internal val dayPeriodOptions = listOf("早上", "下午", "晚上")
 
 internal fun dayPeriodLabel(timeMillis: Long): String {
@@ -130,15 +143,18 @@ internal fun withDayPeriod(timeMillis: Long, period: String): Long {
     }.timeInMillis
 }
 
-internal fun formatDateWithPeriod(timeMillis: Long): String {
-    return "${formatDate(timeMillis)} ${dayPeriodLabel(timeMillis)}"
+internal fun formatDateWithPeriod(
+    timeMillis: Long,
+    strings: MilkTeaStrings = MilkTeaStringsZhHans,
+): String {
+    return "${formatDate(timeMillis, strings)} ${strings.dayPeriod(dayPeriodLabel(timeMillis))}"
 }
 
-internal fun formatAmount(amount: Double): String {
+internal fun formatAmount(amount: Double, strings: MilkTeaStrings = MilkTeaStringsZhHans): String {
     return if (amount % 1.0 == 0.0) {
         amount.toInt().toString()
     } else {
-        String.format(Locale.getDefault(), "%.2f", amount)
+        String.format(strings.locale, "%.2f", amount)
     }
 }
 
@@ -154,14 +170,10 @@ internal fun startOfDay(timeMillis: Long): Long {
 
 internal fun startOfWeek(timeMillis: Long): Long {
     val calendar = Calendar.getInstance().apply {
-        this.timeInMillis = timeMillis
-        firstDayOfWeek = Calendar.MONDAY
-        set(Calendar.HOUR_OF_DAY, 0)
-        set(Calendar.MINUTE, 0)
-        set(Calendar.SECOND, 0)
-        set(Calendar.MILLISECOND, 0)
+        this.timeInMillis = startOfDay(timeMillis)
+        firstDayOfWeek = WEEK_START_DAY
     }
-    calendar.set(Calendar.DAY_OF_WEEK, Calendar.MONDAY)
+    calendar.add(Calendar.DAY_OF_MONTH, -weekDayOffset(calendar.get(Calendar.DAY_OF_WEEK)))
     return calendar.timeInMillis
 }
 
@@ -246,6 +258,7 @@ internal fun loadRecords(context: Context): List<MilkTeaRecord> {
             cupSize = obj.optString("cupSize", cupSizeOptions.first()),
             amountYuan = obj.optString("amountYuan"),
             note = if (obj.has("productName")) obj.optString("note") else "",
+            deletedAtMillis = obj.optLong("deletedAtMillis", 0L),
         )
     }
     return result.sortedByDescending { it.drinkTimeMillis }
@@ -265,6 +278,7 @@ internal fun saveRecords(context: Context, records: List<MilkTeaRecord>) {
                 put("cupSize", record.cupSize)
                 put("amountYuan", record.amountYuan)
                 put("note", record.note)
+                put("deletedAtMillis", record.deletedAtMillis)
             },
         )
     }
@@ -273,4 +287,28 @@ internal fun saveRecords(context: Context, records: List<MilkTeaRecord>) {
         .edit()
         .putString(MILK_TEA_RECORDS_KEY, array.toString())
         .apply()
+}
+
+internal fun purgeExpiredTrash(
+    records: List<MilkTeaRecord>,
+    now: Long = System.currentTimeMillis(),
+    retentionDays: Int = TRASH_RETENTION_DAYS,
+): List<MilkTeaRecord> {
+    val cutoff = now - retentionDays * 24L * 60 * 60 * 1000
+    return records.filterNot { it.deletedAtMillis > 0L && it.deletedAtMillis < cutoff }
+}
+
+internal fun loadAndPurgeRecords(context: Context): List<MilkTeaRecord> {
+    val loaded = loadRecords(context)
+    val purged = purgeExpiredTrash(loaded)
+    if (purged.size != loaded.size) {
+        saveRecords(context, purged)
+    }
+    return purged
+}
+
+internal fun daysUntilPermanentDelete(deletedAtMillis: Long, now: Long = System.currentTimeMillis()): Int {
+    val expiresAt = deletedAtMillis + TRASH_RETENTION_DAYS * 24L * 60 * 60 * 1000
+    val remainingMillis = (expiresAt - now).coerceAtLeast(0L)
+    return (remainingMillis / (24L * 60 * 60 * 1000)).toInt()
 }

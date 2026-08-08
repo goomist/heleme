@@ -51,14 +51,15 @@ internal fun TrendChartCard(
                 .padding(14.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
+            val strings = LocalMilkTeaStrings.current
             Text(title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.90f))
             if (trend.values.all { it == 0.0 }) {
-                Text("暂无记录", color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.48f))
+                Text(strings.noRecords, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.48f))
             } else {
                 LineTrendChart(trend = trend, lineColor = lineColor)
                 val peak = trend.values.maxOrNull() ?: 0.0
-                val peakText = if (unitPrefix.isBlank()) formatAmount(peak) else "$unitPrefix${formatAmount(peak)}"
-                Text("峰值：$peakText", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.52f))
+                val peakText = if (unitPrefix.isBlank()) formatAmount(peak, strings) else "$unitPrefix${formatAmount(peak, strings)}"
+                Text(strings.peakLabel(peakText), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.52f))
             }
         }
     }
@@ -83,14 +84,15 @@ internal fun BlockTrendCard(
                 .padding(14.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
+            val strings = LocalMilkTeaStrings.current
             Text(title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.90f))
             if (trend.values.all { it == 0.0 }) {
-                Text("暂无记录", color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.48f))
+                Text(strings.noRecords, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.48f))
             } else {
                 BlockTrendChart(trend = trend, blockColor = blockColor, fixedColumns = fixedColumns)
                 val peak = trend.values.maxOrNull() ?: 0.0
-                val peakText = if (unitLabel.isBlank()) formatAmount(peak) else "${formatAmount(peak)}$unitLabel"
-                Text("峰值：$peakText", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.52f))
+                val peakText = if (unitLabel.isBlank()) formatAmount(peak, strings) else "${formatAmount(peak, strings)}$unitLabel"
+                Text(strings.peakLabel(peakText), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.52f))
             }
         }
     }
@@ -286,6 +288,8 @@ internal fun ChoiceChips(
     options: List<String>,
     selectedOption: String,
     onSelect: (String) -> Unit,
+    // Options are storage keys; [label] renders one in the current language.
+    label: (String) -> String = { it },
 ) {
     Row(
         modifier = Modifier
@@ -297,7 +301,7 @@ internal fun ChoiceChips(
             FilterChip(
                 selected = option == selectedOption,
                 onClick = { onSelect(option) },
-                label = { Text(option) },
+                label = { Text(label(option)) },
                 colors = FilterChipDefaults.filterChipColors(
                     selectedContainerColor = MaterialTheme.colorScheme.primary,
                     selectedLabelColor = MaterialTheme.colorScheme.onPrimary,

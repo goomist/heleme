@@ -17,6 +17,7 @@ internal fun CaramelDatePickerDialog(
     onConfirm: (Long) -> Unit,
     onDismiss: () -> Unit,
 ) {
+    val strings = LocalMilkTeaStrings.current
     val state = rememberDatePickerState(initialSelectedDateMillis = initialMillis)
     DatePickerDialog(
         onDismissRequest = onDismiss,
@@ -37,9 +38,9 @@ internal fun CaramelDatePickerDialog(
                         onDismiss()
                     }
                 },
-            ) { Text("确定") }
+            ) { Text(strings.confirm) }
         },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("取消") } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text(strings.cancel) } },
     ) {
         DatePicker(state = state)
     }

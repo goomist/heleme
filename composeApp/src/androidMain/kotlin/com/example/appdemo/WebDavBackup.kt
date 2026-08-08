@@ -75,10 +75,15 @@ private data class WebDavConfig(
 internal fun WebDavBackupScreen(
     backupFileName: String,
     recordsKey: String,
+    // Written into the backup payload and checked on restore, so it must NOT be translated —
+    // otherwise a backup made in one language cannot be restored in another.
     recordType: String,
+    // What the user actually reads — translated, unlike recordType.
+    recordTypeLabel: String = recordType,
     onRestored: () -> Unit,
 ) {
     val context = androidx.compose.ui.platform.LocalContext.current
+    val strings = LocalMilkTeaStrings.current
     val initial = remember { loadWebDavConfig(context) }
     var url by rememberSaveable { mutableStateOf(initial.url) }
     var username by rememberSaveable { mutableStateOf(initial.username) }
@@ -97,11 +102,11 @@ internal fun WebDavBackupScreen(
     )
 
     fun validate(config: WebDavConfig): String? = when {
-        config.url.isBlank() -> "请填写 WebDAV 目录地址"
-        !config.url.startsWith("https://", ignoreCase = true) -> "为保护记录，只允许使用 HTTPS 地址"
-        config.username.isBlank() -> "请填写用户名"
-        config.password.isBlank() -> "请填写 WebDAV 密码"
-        config.backupPassword.length < 8 -> "备份密码至少需要 8 位"
+        config.url.isBlank() -> strings.webdavErrUrl
+        !config.url.startsWith("https://", ignoreCase = true) -> strings.webdavErrHttps
+        config.username.isBlank() -> strings.webdavErrUsername
+        config.password.isBlank() -> strings.webdavErrPassword
+        config.backupPassword.length < 8 -> strings.webdavErrBackupPassword
         else -> null
     }
 
@@ -114,10 +119,10 @@ internal fun WebDavBackupScreen(
         }
         saveWebDavConfig(context, config)
         busy = true
-        status = "正在处理…"
+        status = strings.webdavProcessing
         scope.launch {
             status = runCatching { block(config) }
-                .getOrElse { it.message ?: "操作失败" }
+                .getOrElse { it.message ?: strings.webdavGenericError }
             busy = false
         }
     }
@@ -129,9 +134,9 @@ internal fun WebDavBackupScreen(
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(14.dp),
     ) {
-        Text("WebDAV 云备份", style = MaterialTheme.typography.headlineSmall)
+        Text(strings.webdavTitle, style = MaterialTheme.typography.headlineSmall)
         Text(
-            "当前备份：$recordType。记录会先在手机端加密，再上传到 WebDAV。",
+            strings.webdavIntro(recordTypeLabel),
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
 
@@ -139,7 +144,7 @@ internal fun WebDavBackupScreen(
             value = url,
             onValueChange = { url = it },
             modifier = Modifier.fillMaxWidth(),
-            label = { Text("WebDAV 目录地址") },
+            label = { Text(strings.webdavUrlLabel) },
             placeholder = { Text("https://dav.example.com/backups/") },
             singleLine = true,
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri),
@@ -148,14 +153,14 @@ internal fun WebDavBackupScreen(
             value = username,
             onValueChange = { username = it },
             modifier = Modifier.fillMaxWidth(),
-            label = { Text("用户名") },
+            label = { Text(strings.webdavUsernameLabel) },
             singleLine = true,
         )
         OutlinedTextField(
             value = password,
             onValueChange = { password = it },
             modifier = Modifier.fillMaxWidth(),
-            label = { Text("WebDAV 密码") },
+            label = { Text(strings.webdavPasswordLabel) },
             singleLine = true,
             visualTransformation = PasswordVisualTransformation(),
         )
@@ -163,8 +168,8 @@ internal fun WebDavBackupScreen(
             value = backupPassword,
             onValueChange = { backupPassword = it },
             modifier = Modifier.fillMaxWidth(),
-            label = { Text("备份加密密码") },
-            supportingText = { Text("换手机恢复时需要，请务必记住（至少 8 位）") },
+            label = { Text(strings.webdavBackupPasswordLabel) },
+            supportingText = { Text(strings.webdavBackupPasswordHint) },
             singleLine = true,
             visualTransformation = PasswordVisualTransformation(),
         )
@@ -178,11 +183,11 @@ internal fun WebDavBackupScreen(
                 modifier = Modifier.weight(1f),
                 onClick = {
                     runAction { config ->
-                        withContext(Dispatchers.IO) { testWebDav(config) }
-                        "连接成功"
+                        withContext(Dispatchers.IO) { testWebDav(config, strings) }
+                        strings.webdavTestOk
                     }
                 },
-            ) { Text("测试连接") }
+            ) { Text(strings.webdavTestButton) }
             Button(
                 enabled = !busy,
                 modifier = Modifier.weight(1f),
@@ -193,10 +198,10 @@ internal fun WebDavBackupScreen(
                         status = error
                     } else {
                         saveWebDavConfig(context, config)
-                        status = "配置已保存"
+                        status = strings.webdavConfigSaved
                     }
                 },
-            ) { Text("保存配置") }
+            ) { Text(strings.webdavSaveButton) }
         }
 
         Card(
@@ -217,19 +222,19 @@ internal fun WebDavBackupScreen(
                                 .getSharedPreferences(RECORDS_PREFS_NAME, Context.MODE_PRIVATE)
                                 .getString(recordsKey, "[]") ?: "[]"
                             withContext(Dispatchers.IO) {
-                                uploadBackup(config, backupFileName, recordType, rawRecords)
+                                uploadBackup(config, backupFileName, recordType, rawRecords, strings)
                             }
                             context.getSharedPreferences(WEBDAV_PREFS_NAME, Context.MODE_PRIVATE)
                                 .edit().putLong(KEY_LAST_BACKUP, System.currentTimeMillis()).apply()
-                            "备份成功，共 ${JSONArray(rawRecords).length()} 条记录"
+                            strings.webdavBackupOk(JSONArray(rawRecords).length())
                         }
                     },
-                ) { Text("备份到云端") }
+                ) { Text(strings.webdavUploadButton) }
                 OutlinedButton(
                     enabled = !busy,
                     modifier = Modifier.fillMaxWidth(),
                     onClick = { confirmRestore = true },
-                ) { Text("从云端恢复") }
+                ) { Text(strings.webdavDownloadButton) }
             }
         }
 
@@ -251,7 +256,7 @@ internal fun WebDavBackupScreen(
         }
         if (lastBackup > 0L) {
             Text(
-                "最近备份：${formatTime(lastBackup)}",
+                strings.webdavLastBackup(formatTime(lastBackup, strings)),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -261,26 +266,26 @@ internal fun WebDavBackupScreen(
     if (confirmRestore) {
         AlertDialog(
             onDismissRequest = { confirmRestore = false },
-            title = { Text("恢复云端备份？") },
-            text = { Text("恢复会用云端备份覆盖当前设备上的全部$recordType。此操作无法撤销。") },
+            title = { Text(strings.webdavRestoreConfirmTitle) },
+            text = { Text(strings.webdavRestoreConfirmBody(recordTypeLabel)) },
             confirmButton = {
                 TextButton(
                     onClick = {
                         confirmRestore = false
                         runAction { config ->
                             val restored = withContext(Dispatchers.IO) {
-                                downloadBackup(config, backupFileName, recordType)
+                                downloadBackup(config, backupFileName, recordType, strings)
                             }
                             context.getSharedPreferences(RECORDS_PREFS_NAME, Context.MODE_PRIVATE)
                                 .edit().putString(recordsKey, restored).commit()
                             onRestored()
-                            "恢复成功，共 ${JSONArray(restored).length()} 条记录"
+                            strings.webdavRestoreOk(JSONArray(restored).length())
                         }
                     },
-                ) { Text("确认恢复") }
+                ) { Text(strings.webdavRestoreConfirmAction) }
             },
             dismissButton = {
-                TextButton(onClick = { confirmRestore = false }) { Text("取消") }
+                TextButton(onClick = { confirmRestore = false }) { Text(strings.cancel) }
             },
         )
     }
@@ -306,7 +311,7 @@ private fun saveWebDavConfig(context: Context, config: WebDavConfig) {
         .apply()
 }
 
-private fun testWebDav(config: WebDavConfig) {
+private fun testWebDav(config: WebDavConfig, strings: MilkTeaStrings) {
     val testFileName = ".appdemo-write-test-${UUID.randomUUID()}.tmp"
     val testUrl = buildBackupUrl(config.url, testFileName)
     val connection = openConnection(config, testUrl, "PUT")
@@ -317,7 +322,7 @@ private fun testWebDav(config: WebDavConfig) {
         connection.setFixedLengthStreamingMode(bytes.size)
         connection.outputStream.use { it.write(bytes) }
         val code = connection.responseCode
-        if (code !in 200..299) throwWebDavError("写入测试", code, connection, config)
+        if (code !in 200..299) throwWebDavError(strings.webdavActionWriteTest, code, connection, config, strings)
     } finally {
         connection.disconnect()
     }
@@ -326,7 +331,7 @@ private fun testWebDav(config: WebDavConfig) {
     try {
         val code = deleteConnection.responseCode
         if (code !in 200..299 && code != HttpURLConnection.HTTP_NOT_FOUND) {
-            throwWebDavError("清理测试文件", code, deleteConnection, config)
+            throwWebDavError(strings.webdavActionCleanup, code, deleteConnection, config, strings)
         }
     } finally {
         deleteConnection.disconnect()
@@ -338,6 +343,7 @@ private fun uploadBackup(
     fileName: String,
     recordType: String,
     rawRecords: String,
+    strings: MilkTeaStrings,
 ) {
     JSONArray(rawRecords)
     val plain = JSONObject()
@@ -355,7 +361,7 @@ private fun uploadBackup(
         connection.setFixedLengthStreamingMode(bytes.size)
         connection.outputStream.use { it.write(bytes) }
         val code = connection.responseCode
-        if (code !in 200..299) throwWebDavError("上传", code, connection, config)
+        if (code !in 200..299) throwWebDavError(strings.webdavActionUpload, code, connection, config, strings)
     } finally {
         connection.disconnect()
     }
@@ -365,19 +371,20 @@ private fun downloadBackup(
     config: WebDavConfig,
     fileName: String,
     expectedRecordType: String,
+    strings: MilkTeaStrings,
 ): String {
     val connection = openConnection(config, buildBackupUrl(config.url, fileName), "GET")
     try {
         val code = connection.responseCode
-        if (code == HttpURLConnection.HTTP_NOT_FOUND) error("云端还没有备份文件")
-        if (code !in 200..299) throwWebDavError("下载", code, connection, config)
+        if (code == HttpURLConnection.HTTP_NOT_FOUND) error(strings.webdavErrNoBackup)
+        if (code !in 200..299) throwWebDavError(strings.webdavActionDownload, code, connection, config, strings)
         val encrypted = connection.inputStream.bufferedReader(StandardCharsets.UTF_8).use { it.readText() }
-        val payload = JSONObject(decryptBackup(encrypted, config.backupPassword))
-        if (payload.optInt("version") != BACKUP_VERSION) error("不支持的备份版本")
-        if (payload.optString("recordType") != expectedRecordType) error("云端备份类型不匹配")
+        val payload = JSONObject(decryptBackup(encrypted, config.backupPassword, strings))
+        if (payload.optInt("version") != BACKUP_VERSION) error(strings.webdavErrVersion)
+        if (payload.optString("recordType") != expectedRecordType) error(strings.webdavErrTypeMismatch)
         return payload.getJSONArray("records").toString()
     } catch (e: javax.crypto.AEADBadTagException) {
-        error("备份密码错误或备份文件已损坏")
+        error(strings.webdavErrBadPassword)
     } finally {
         connection.disconnect()
     }
@@ -403,6 +410,7 @@ private fun throwWebDavError(
     code: Int,
     connection: HttpURLConnection,
     config: WebDavConfig,
+    strings: MilkTeaStrings,
 ): Nothing {
     val detail = runCatching {
         connection.errorStream?.bufferedReader(StandardCharsets.UTF_8)?.use { it.readText() }
@@ -412,20 +420,20 @@ private fun throwWebDavError(
             ?.take(160)
     }.getOrNull().orEmpty()
     val message = when (code) {
-        HttpURLConnection.HTTP_UNAUTHORIZED -> "认证失败，请检查用户名和 WebDAV 专用密码"
+        HttpURLConnection.HTTP_UNAUTHORIZED -> strings.webdavErrUnauthorized
         HttpURLConnection.HTTP_FORBIDDEN -> {
             if (config.url.contains("teracloud", ignoreCase = true) ||
                 config.url.contains("infini-cloud", ignoreCase = true)
             ) {
-                "服务器拒绝写入。InfiniCLOUD 请使用 WebDAV 连接 ID 和专用密码，并确认目录已存在且可写"
+                strings.webdavErrForbiddenInfini
             } else {
-                "服务器拒绝写入，请检查账号写入权限和目录地址"
+                strings.webdavErrForbidden
             }
         }
-        HttpURLConnection.HTTP_NOT_FOUND -> "目录不存在，请先在 WebDAV 中创建该目录"
-        else -> "$action 失败，服务器返回 HTTP $code"
+        HttpURLConnection.HTTP_NOT_FOUND -> strings.webdavErrNotFound
+        else -> strings.webdavErrHttp(action, code)
     }
-    error(if (detail.isBlank()) message else "$message（$detail）")
+    error(if (detail.isBlank()) message else strings.webdavErrWithDetail(message, detail))
 }
 
 private fun buildBackupUrl(baseUrl: String, fileName: String): String {
@@ -450,9 +458,9 @@ private fun encryptBackup(plain: String, password: String): String {
         .toString()
 }
 
-private fun decryptBackup(encrypted: String, password: String): String {
+private fun decryptBackup(encrypted: String, password: String, strings: MilkTeaStrings): String {
     val envelope = JSONObject(encrypted)
-    if (envelope.optString("format") != "appdemo-encrypted-backup") error("备份文件格式无效")
+    if (envelope.optString("format") != "appdemo-encrypted-backup") error(strings.webdavErrBadFormat)
     val salt = Base64.decode(envelope.getString("salt"), Base64.NO_WRAP)
     val iv = Base64.decode(envelope.getString("iv"), Base64.NO_WRAP)
     val data = Base64.decode(envelope.getString("data"), Base64.NO_WRAP)

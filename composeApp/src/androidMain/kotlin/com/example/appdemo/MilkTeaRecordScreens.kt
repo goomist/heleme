@@ -73,6 +73,7 @@ internal fun RecordsScreen(
     onSave: () -> Unit,
     onRecordClick: (MilkTeaRecord) -> Unit,
 ) {
+    val strings = LocalMilkTeaStrings.current
     var showDatePickerDialog by remember { mutableStateOf(false) }
     var selectedTab by rememberSaveable { mutableStateOf(0) }
 
@@ -81,12 +82,12 @@ internal fun RecordsScreen(
             Tab(
                 selected = selectedTab == 0,
                 onClick = { selectedTab = 0 },
-                text = { Text("新增记录") },
+                text = { Text(strings.tabNewRecord) },
             )
             Tab(
                 selected = selectedTab == 1,
                 onClick = { selectedTab = 1 },
-                text = { Text("全部记录") },
+                text = { Text(strings.tabAllRecords) },
             )
         }
 
@@ -148,6 +149,7 @@ private fun AddRecordPane(
     onDrinkTimeChange: (Long) -> Unit,
     onSave: () -> Unit,
 ) {
+    val strings = LocalMilkTeaStrings.current
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -166,8 +168,8 @@ private fun AddRecordPane(
             OutlinedTextField(
                 value = brandInput,
                 onValueChange = onBrandInputChange,
-                label = { Text("品牌/店名") },
-                placeholder = { Text("例如：喜茶、奈雪、霸王茶姬") },
+                label = { Text(strings.brandLabel) },
+                placeholder = { Text(strings.brandPlaceholder) },
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true,
             )
@@ -180,15 +182,15 @@ private fun AddRecordPane(
             OutlinedTextField(
                 value = amountInput,
                 onValueChange = onAmountInputChange,
-                label = { Text("金额（元）") },
-                placeholder = { Text("例如：18.5") },
+                label = { Text(strings.amountLabel) },
+                placeholder = { Text(strings.amountPlaceholder) },
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true,
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
             )
             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 Text(
-                    "喝奶茶时间：${formatDateWithPeriod(selectedDrinkTimeMillis)}",
+                    strings.drinkTime(formatDateWithPeriod(selectedDrinkTimeMillis, strings)),
                     style = MaterialTheme.typography.bodyMedium,
                 )
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -199,7 +201,7 @@ private fun AddRecordPane(
                             .border(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.30f), RoundedCornerShape(20.dp))
                             .clickable { onShowDatePicker() }
                             .padding(horizontal = 12.dp, vertical = 6.dp),
-                    ) { Text("选日期", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.SemiBold) }
+                    ) { Text(strings.pickDate, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.SemiBold) }
                     Box(
                         modifier = Modifier
                             .clip(RoundedCornerShape(20.dp))
@@ -207,31 +209,32 @@ private fun AddRecordPane(
                             .border(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.30f), RoundedCornerShape(20.dp))
                             .clickable { onDrinkTimeChange(System.currentTimeMillis()) }
                             .padding(horizontal = 12.dp, vertical = 6.dp),
-                    ) { Text("现在", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.SemiBold) }
+                    ) { Text(strings.nowButton, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.SemiBold) }
                 }
                 ChoiceChips(
                     options = dayPeriodOptions,
                     selectedOption = dayPeriodLabel(selectedDrinkTimeMillis),
                     onSelect = { onDrinkTimeChange(withDayPeriod(selectedDrinkTimeMillis, it)) },
+                    label = strings.dayPeriod,
                 )
             }
             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                Text("糖度", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                ChoiceChips(options = sugarOptions, selectedOption = selectedSugar, onSelect = onSugarSelect)
+                Text(strings.sugarTitle, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                ChoiceChips(options = sugarOptions, selectedOption = selectedSugar, onSelect = onSugarSelect, label = strings.sugar)
             }
             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                Text("温度/冰度", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                ChoiceChips(options = iceOptions, selectedOption = selectedIce, onSelect = onIceSelect)
+                Text(strings.iceTitle, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                ChoiceChips(options = iceOptions, selectedOption = selectedIce, onSelect = onIceSelect, label = strings.ice)
             }
             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                Text("杯型", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                ChoiceChips(options = cupSizeOptions, selectedOption = selectedCupSize, onSelect = onCupSizeSelect)
+                Text(strings.cupSizeTitle, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                ChoiceChips(options = cupSizeOptions, selectedOption = selectedCupSize, onSelect = onCupSizeSelect, label = strings.cupSize)
             }
             OutlinedTextField(
                 value = noteInput,
                 onValueChange = onNoteInputChange,
-                label = { Text("备注") },
-                placeholder = { Text("例如：加珍珠、少奶、排队很久") },
+                label = { Text(strings.noteLabel) },
+                placeholder = { Text(strings.notePlaceholder) },
                 modifier = Modifier.fillMaxWidth(),
                 maxLines = 2,
             )
@@ -241,7 +244,7 @@ private fun AddRecordPane(
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(12.dp),
             ) {
-                Text("记录一杯", fontWeight = FontWeight.Bold)
+                Text(strings.submitRecord, fontWeight = FontWeight.Bold)
             }
         }
     }
@@ -252,6 +255,7 @@ private fun AllRecordsPane(
     records: List<MilkTeaRecord>,
     onRecordClick: (MilkTeaRecord) -> Unit,
 ) {
+    val strings = LocalMilkTeaStrings.current
     var keyword by rememberSaveable { mutableStateOf("") }
 
     val filteredRecords = remember(records, keyword) {
@@ -281,8 +285,8 @@ private fun AllRecordsPane(
             OutlinedTextField(
                 value = keyword,
                 onValueChange = { keyword = it },
-                label = { Text("搜索品牌、品名或备注") },
-                placeholder = { Text("例如：苦瓜、喜茶") },
+                label = { Text(strings.searchLabel) },
+                placeholder = { Text(strings.searchPlaceholder) },
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true,
             )
@@ -291,7 +295,7 @@ private fun AllRecordsPane(
         if (filteredRecords.isEmpty()) {
             item {
                 Text(
-                    if (records.isEmpty()) "还没有记录，先打第一杯吧。" else "没有匹配的记录。",
+                    if (records.isEmpty()) strings.emptyNoRecords else strings.emptyNoMatch,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
@@ -299,7 +303,7 @@ private fun AllRecordsPane(
             groupedByMonth.forEach { (monthStart, monthRecords) ->
                 item(key = "header_$monthStart") {
                     Text(
-                        formatMonth(monthStart),
+                        formatMonth(monthStart, strings),
                         style = MaterialTheme.typography.titleSmall,
                         fontWeight = FontWeight.SemiBold,
                         color = MaterialTheme.colorScheme.primary,
@@ -321,6 +325,7 @@ private fun ProductNameField(
     suggestionSource: List<MilkTeaRecord>,
     modifier: Modifier = Modifier,
 ) {
+    val strings = LocalMilkTeaStrings.current
     var isFocused by remember { mutableStateOf(false) }
     val suggestions = remember(value, suggestionSource) {
         val query = value.trim()
@@ -339,8 +344,8 @@ private fun ProductNameField(
         OutlinedTextField(
             value = value,
             onValueChange = onValueChange,
-            label = { Text("品名") },
-            placeholder = { Text("例如：多肉葡萄、伯牙绝弦") },
+            label = { Text(strings.productLabel) },
+            placeholder = { Text(strings.productPlaceholder) },
             modifier = Modifier.fillMaxWidth().onFocusChanged { isFocused = it.isFocused },
             singleLine = true,
         )
@@ -374,6 +379,7 @@ internal fun EditRecordDialog(
     onDismiss: () -> Unit,
     onSave: (MilkTeaRecord) -> Unit,
 ) {
+    val strings = LocalMilkTeaStrings.current
     var brand by rememberSaveable(original.id) { mutableStateOf(original.brand) }
     var productName by rememberSaveable(original.id) { mutableStateOf(original.productName) }
     var amount by rememberSaveable(original.id) { mutableStateOf(original.amountYuan) }
@@ -386,7 +392,7 @@ internal fun EditRecordDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("编辑记录") },
+        title = { Text(strings.editRecordTitle) },
         text = {
             Column(
                 modifier = Modifier
@@ -397,7 +403,7 @@ internal fun EditRecordDialog(
                 OutlinedTextField(
                     value = brand,
                     onValueChange = { brand = it },
-                    label = { Text("品牌/店名") },
+                    label = { Text(strings.brandLabel) },
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true,
                 )
@@ -410,44 +416,48 @@ internal fun EditRecordDialog(
                 OutlinedTextField(
                     value = amount,
                     onValueChange = { amount = it },
-                    label = { Text("金额（元）") },
+                    label = { Text(strings.amountLabel) },
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true,
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                 )
-                Text("时间：${formatDateWithPeriod(drinkTimeMillis)}")
+                Text(strings.detailTime(formatDateWithPeriod(drinkTimeMillis, strings)))
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     TextButton(onClick = { showDatePickerDialog = true }) {
-                        Text("选日期")
+                        Text(strings.pickDate)
                     }
                 }
                 ChoiceChips(
                     options = dayPeriodOptions,
                     selectedOption = dayPeriodLabel(drinkTimeMillis),
                     onSelect = { drinkTimeMillis = withDayPeriod(drinkTimeMillis, it) },
+                    label = strings.dayPeriod,
                 )
-                Text("糖度")
+                Text(strings.sugarTitle)
                 ChoiceChips(
                     options = sugarOptions,
                     selectedOption = sugar,
                     onSelect = { sugar = it },
+                    label = strings.sugar,
                 )
-                Text("温度/冰度")
+                Text(strings.iceTitle)
                 ChoiceChips(
                     options = iceOptions,
                     selectedOption = ice,
                     onSelect = { ice = it },
+                    label = strings.ice,
                 )
-                Text("杯型")
+                Text(strings.cupSizeTitle)
                 ChoiceChips(
                     options = cupSizeOptions,
                     selectedOption = cupSize,
                     onSelect = { cupSize = it },
+                    label = strings.cupSize,
                 )
                 OutlinedTextField(
                     value = note,
                     onValueChange = { note = it },
-                    label = { Text("备注") },
+                    label = { Text(strings.noteLabel) },
                     modifier = Modifier.fillMaxWidth(),
                 )
             }
@@ -471,12 +481,12 @@ internal fun EditRecordDialog(
                     )
                 },
             ) {
-                Text("保存")
+                Text(strings.save)
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("取消")
+                Text(strings.cancel)
             }
         },
     )
@@ -502,6 +512,7 @@ internal fun StatsScreen(
     onMonthAnchorChange: (Long) -> Unit,
     onYearAnchorChange: (Long) -> Unit,
 ) {
+    val strings = LocalMilkTeaStrings.current
     var showAnchorPickerDialog by remember { mutableStateOf(false) }
 
     val periodStart: Long
@@ -520,9 +531,9 @@ internal fun StatsScreen(
             periodEnd = end
             prevPeriodStart = addDays(start, -7)
             prevPeriodEnd = start
-            periodLabel = formatWeekRange(start)
-            amountTrend = buildWeekAmountTrend(records, start)
-            cupTrend = buildWeekCupTrend(records, start)
+            periodLabel = formatWeekRange(start, strings)
+            amountTrend = buildWeekAmountTrend(records, start, strings)
+            cupTrend = buildWeekCupTrend(records, start, strings)
         }
 
         StatsMode.Month -> {
@@ -532,7 +543,7 @@ internal fun StatsScreen(
             periodEnd = end
             prevPeriodStart = addMonths(start, -1)
             prevPeriodEnd = start
-            periodLabel = formatMonth(start)
+            periodLabel = formatMonth(start, strings)
             amountTrend = buildMonthAmountTrend(records, start)
             cupTrend = buildMonthCupTrend(records, start)
         }
@@ -544,9 +555,9 @@ internal fun StatsScreen(
             periodEnd = end
             prevPeriodStart = addYears(start, -1)
             prevPeriodEnd = start
-            periodLabel = formatYear(start)
-            amountTrend = buildYearAmountTrend(records, start)
-            cupTrend = buildYearCupTrend(records, start)
+            periodLabel = formatYear(start, strings)
+            amountTrend = buildYearAmountTrend(records, start, strings)
+            cupTrend = buildYearCupTrend(records, start, strings)
         }
     }
 
@@ -586,9 +597,9 @@ internal fun StatsScreen(
     ) {
         item {
             TabRow(selectedTabIndex = mode.ordinal) {
-                Tab(selected = mode == StatsMode.Week, onClick = { onModeChange(StatsMode.Week) }, text = { Text("周报") })
-                Tab(selected = mode == StatsMode.Month, onClick = { onModeChange(StatsMode.Month) }, text = { Text("月报") })
-                Tab(selected = mode == StatsMode.Year, onClick = { onModeChange(StatsMode.Year) }, text = { Text("年报") })
+                Tab(selected = mode == StatsMode.Week, onClick = { onModeChange(StatsMode.Week) }, text = { Text(strings.tabWeekly) })
+                Tab(selected = mode == StatsMode.Month, onClick = { onModeChange(StatsMode.Month) }, text = { Text(strings.tabMonthly) })
+                Tab(selected = mode == StatsMode.Year, onClick = { onModeChange(StatsMode.Year) }, text = { Text(strings.tabYearly) })
             }
         }
 
@@ -611,7 +622,7 @@ internal fun StatsScreen(
                         }
                     },
                 ) {
-                    Text("‹ 上一${mode.displayName()}")
+                    Text(strings.prevPeriod(mode))
                 }
 
                 Text(
@@ -630,7 +641,7 @@ internal fun StatsScreen(
                         }
                     },
                 ) {
-                    Text("下一${mode.displayName()} ›")
+                    Text(strings.nextPeriod(mode))
                 }
             }
         }
@@ -654,7 +665,7 @@ internal fun StatsScreen(
                         fontWeight = FontWeight.Black,
                         color = MaterialTheme.colorScheme.primary,
                     )
-                    Text("杯奶茶", style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(strings.cupsOfMilkTea(stat.cupCount), style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
                 Box(
                     modifier = Modifier
@@ -667,13 +678,13 @@ internal fun StatsScreen(
                     horizontalArrangement = Arrangement.SpaceBetween,
                 ) {
                     Column {
-                        Text("花费", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f))
-                        Text("￥${formatAmount(stat.totalAmount)}", style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.primary)
+                        Text(strings.spendingLabel, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f))
+                        Text(strings.brandValueSpending(formatAmount(stat.totalAmount, strings)), style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.primary)
                     }
                     Column(horizontalAlignment = Alignment.End) {
-                        Text("最常喝", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f))
+                        Text(strings.favoriteLabel, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f))
                         Text(
-                            if (stat.favoriteCount > 0) "${stat.favoriteBrand}·${stat.favoriteCount}杯" else "暂无",
+                            if (stat.favoriteCount > 0) strings.favoriteValue(stat.favoriteBrand, stat.favoriteCount) else strings.empty,
                             style = MaterialTheme.typography.bodyLarge,
                             fontWeight = FontWeight.SemiBold,
                             color = MaterialTheme.colorScheme.primary,
@@ -685,7 +696,7 @@ internal fun StatsScreen(
 
         item {
             TrendChartCard(
-                title = "${mode.displayName()}花费趋势",
+                title = strings.spendTrendTitle(mode),
                 trend = amountTrend,
                 lineColor = MaterialTheme.colorScheme.primary,
                 unitPrefix = "￥",
@@ -706,11 +717,11 @@ internal fun StatsScreen(
                         modifier = Modifier.padding(14.dp).fillMaxHeight(),
                         verticalArrangement = Arrangement.spacedBy(4.dp),
                     ) {
-                        Text("平均单价", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.52f))
+                        Text(strings.avgPriceLabel, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.52f))
                         if (avgPrice > 0) {
-                            Text("￥${formatAmount(avgPrice)}", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                            Text(strings.brandValueSpending(formatAmount(avgPrice, strings)), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
                         } else {
-                            Text("暂无", color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.48f))
+                            Text(strings.empty, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.48f))
                         }
                     }
                 }
@@ -723,12 +734,12 @@ internal fun StatsScreen(
                         modifier = Modifier.padding(14.dp).fillMaxHeight(),
                         verticalArrangement = Arrangement.spacedBy(4.dp),
                     ) {
-                        Text("最贵一杯", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.52f))
+                        Text(strings.mostExpensiveLabel, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.52f))
                         if (mostExpensive != null && parseAmount(mostExpensive.amountYuan) > 0) {
-                            Text("￥${mostExpensive.amountYuan}", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                            Text(strings.brandValueSpending(mostExpensive.amountYuan), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
                             Text(mostExpensive.brand, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f))
                         } else {
-                            Text("暂无", color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.48f))
+                            Text(strings.empty, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.48f))
                         }
                     }
                 }
@@ -754,12 +765,12 @@ internal fun StatsScreen(
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
-                            Text("品牌排行", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
+                            Text(strings.brandRankingTitle, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
                             Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                                 FilterChip(
                                     selected = sortBySpending,
                                     onClick = { sortBySpending = true },
-                                    label = { Text("花费") },
+                                    label = { Text(strings.chipSpending) },
                                     colors = FilterChipDefaults.filterChipColors(
                                         selectedContainerColor = MaterialTheme.colorScheme.primary,
                                         selectedLabelColor = MaterialTheme.colorScheme.onPrimary,
@@ -768,7 +779,7 @@ internal fun StatsScreen(
                                 FilterChip(
                                     selected = !sortBySpending,
                                     onClick = { sortBySpending = false },
-                                    label = { Text("杯数") },
+                                    label = { Text(strings.chipCups) },
                                     colors = FilterChipDefaults.filterChipColors(
                                         selectedContainerColor = MaterialTheme.colorScheme.primary,
                                         selectedLabelColor = MaterialTheme.colorScheme.onPrimary,
@@ -797,15 +808,15 @@ internal fun StatsScreen(
                                     Column {
                                         Text(entry.key, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium)
                                         Text(
-                                            if (sortBySpending) "${cups}杯 · 均价￥${formatAmount(avgSpend)}"
-                                            else "共￥${formatAmount(totalSpend)}",
+                                            if (sortBySpending) strings.brandSubSpending(cups, formatAmount(avgSpend, strings))
+                                            else strings.brandSubCups(formatAmount(totalSpend, strings)),
                                             style = MaterialTheme.typography.bodySmall,
                                             color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.52f),
                                         )
                                     }
                                 }
                                 Text(
-                                    if (sortBySpending) "￥${formatAmount(totalSpend)}" else "${cups}杯",
+                                    if (sortBySpending) strings.brandValueSpending(formatAmount(totalSpend, strings)) else strings.brandValueCups(cups),
                                     style = MaterialTheme.typography.bodyMedium,
                                     fontWeight = FontWeight.SemiBold,
                                     color = MaterialTheme.colorScheme.primary,
@@ -825,8 +836,8 @@ internal fun StatsScreen(
                     shape = RoundedCornerShape(16.dp),
                 ) {
                     Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                        Text("当前连续", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.52f))
-                        Text("$currentStreak 天", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                        Text(strings.currentStreakLabel, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.52f))
+                        Text(strings.daysValue(currentStreak), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
                     }
                 }
                 Card(
@@ -835,8 +846,8 @@ internal fun StatsScreen(
                     shape = RoundedCornerShape(16.dp),
                 ) {
                     Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                        Text("历史最长", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.52f))
-                        Text("$longestStreak 天", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                        Text(strings.longestStreakLabel, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.52f))
+                        Text(strings.daysValue(longestStreak), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
                     }
                 }
             }
@@ -849,9 +860,9 @@ internal fun StatsScreen(
                 shape = RoundedCornerShape(16.dp),
             ) {
                 Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    Text("与上${mode.displayName()}对比", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
+                    Text(strings.compareTitle(mode), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
                     if (amountChangeRatio == null) {
-                        Text("上${mode.displayName()}暂无数据", color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.48f))
+                        Text(strings.comparePrevEmpty(mode), color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.48f))
                     } else {
                         val pct = (amountChangeRatio * 100).toInt()
                         val absPct = if (pct < 0) -pct else pct
@@ -865,7 +876,7 @@ internal fun StatsScreen(
                                 color = changeColor,
                             )
                             Text(
-                                "上${mode.displayName()}：￥${formatAmount(prevStat.totalAmount)}",
+                                strings.comparePrevValue(mode, formatAmount(prevStat.totalAmount, strings)),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.52f),
                             )
@@ -878,10 +889,10 @@ internal fun StatsScreen(
         if (mode != StatsMode.Month) {
             item {
                 BlockTrendCard(
-                    title = "${mode.displayName()}杯数趋势",
+                    title = strings.cupTrendTitle(mode),
                     trend = cupTrend,
-                    blockColor = Color(0xFFD32F2F),
-                    unitLabel = "杯",
+                    blockColor = MaterialTheme.colorScheme.primary,
+                    unitLabel = strings.cupUnit,
                     fixedColumns = if (mode == StatsMode.Week) 7 else 12,
                 )
             }
@@ -914,6 +925,7 @@ private fun RecordTagCard(
     record: MilkTeaRecord,
     onClick: () -> Unit,
 ) {
+    val strings = LocalMilkTeaStrings.current
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -946,7 +958,7 @@ private fun RecordTagCard(
                 )
                 if (record.amountYuan.isNotBlank()) {
                     Text(
-                        "￥${record.amountYuan}",
+                        strings.brandValueSpending(record.amountYuan),
                         style = MaterialTheme.typography.bodyMedium,
                         fontWeight = FontWeight.SemiBold,
                         color = MaterialTheme.colorScheme.primary,
@@ -956,14 +968,14 @@ private fun RecordTagCard(
             if (record.productName.isNotBlank()) {
                 Text(record.productName, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
-            Text(formatDateWithPeriod(record.drinkTimeMillis), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f))
+            Text(formatDateWithPeriod(record.drinkTimeMillis, strings), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f))
             Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                AssistChip(onClick = {}, label = { Text(record.cupSize) })
-                AssistChip(onClick = {}, label = { Text(record.sugarLevel) })
-                AssistChip(onClick = {}, label = { Text(record.iceLevel) })
+                AssistChip(onClick = {}, label = { Text(strings.cupSize(record.cupSize)) })
+                AssistChip(onClick = {}, label = { Text(strings.sugar(record.sugarLevel)) })
+                AssistChip(onClick = {}, label = { Text(strings.ice(record.iceLevel)) })
             }
             if (record.note.isNotBlank()) {
-                Text("备注：${record.note}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f))
+                Text(strings.noteLine(record.note), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f))
             }
         }
     }
@@ -987,7 +999,11 @@ private fun buildPeriodStat(records: List<MilkTeaRecord>, start: Long, end: Long
     )
 }
 
-private fun buildWeekAmountTrend(records: List<MilkTeaRecord>, weekStart: Long): TrendSeries {
+private fun buildWeekAmountTrend(
+    records: List<MilkTeaRecord>,
+    weekStart: Long,
+    strings: MilkTeaStrings,
+): TrendSeries {
     val amounts = mutableListOf<Double>()
     val labels = mutableListOf<String>()
     repeat(7) { offset ->
@@ -996,20 +1012,24 @@ private fun buildWeekAmountTrend(records: List<MilkTeaRecord>, weekStart: Long):
         val value = records
             .filter { it.drinkTimeMillis in dayStart until dayEnd }
             .sumOf { parseAmount(it.amountYuan) }
-        labels += formatMonthDay(dayStart)
+        labels += formatMonthDay(dayStart, strings)
         amounts += value
     }
     return TrendSeries(labels = labels, values = amounts)
 }
 
-private fun buildWeekCupTrend(records: List<MilkTeaRecord>, weekStart: Long): TrendSeries {
+private fun buildWeekCupTrend(
+    records: List<MilkTeaRecord>,
+    weekStart: Long,
+    strings: MilkTeaStrings,
+): TrendSeries {
     val cups = mutableListOf<Double>()
     val labels = mutableListOf<String>()
     repeat(7) { offset ->
         val dayStart = addDays(weekStart, offset)
         val dayEnd = addDays(dayStart, 1)
         val value = records.count { it.drinkTimeMillis in dayStart until dayEnd }
-        labels += weekFullLabels[offset]
+        labels += strings.weekFullLabels[offset]
         cups += value.toDouble()
     }
     return TrendSeries(labels = labels, values = cups)
@@ -1053,7 +1073,11 @@ private fun buildMonthCupTrend(records: List<MilkTeaRecord>, monthStart: Long): 
     return TrendSeries(labels = labels, values = cups)
 }
 
-private fun buildYearAmountTrend(records: List<MilkTeaRecord>, yearStart: Long): TrendSeries {
+private fun buildYearAmountTrend(
+    records: List<MilkTeaRecord>,
+    yearStart: Long,
+    strings: MilkTeaStrings,
+): TrendSeries {
     val amounts = mutableListOf<Double>()
     val labels = mutableListOf<String>()
     repeat(12) { monthOffset ->
@@ -1062,20 +1086,24 @@ private fun buildYearAmountTrend(records: List<MilkTeaRecord>, yearStart: Long):
         val value = records
             .filter { it.drinkTimeMillis in monthStart until monthEnd }
             .sumOf { parseAmount(it.amountYuan) }
-        labels += "${monthOffset + 1}月"
+        labels += strings.monthShort(monthOffset + 1)
         amounts += value
     }
     return TrendSeries(labels = labels, values = amounts)
 }
 
-private fun buildYearCupTrend(records: List<MilkTeaRecord>, yearStart: Long): TrendSeries {
+private fun buildYearCupTrend(
+    records: List<MilkTeaRecord>,
+    yearStart: Long,
+    strings: MilkTeaStrings,
+): TrendSeries {
     val cups = mutableListOf<Double>()
     val labels = mutableListOf<String>()
     repeat(12) { monthOffset ->
         val monthStart = addMonths(yearStart, monthOffset)
         val monthEnd = addMonths(monthStart, 1)
         val value = records.count { it.drinkTimeMillis in monthStart until monthEnd }
-        labels += "${monthOffset + 1}月"
+        labels += strings.monthShort(monthOffset + 1)
         cups += value.toDouble()
     }
     return TrendSeries(labels = labels, values = cups)
